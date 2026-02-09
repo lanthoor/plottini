@@ -5,24 +5,35 @@ Plottini allows non-technical users to create publication-quality graphs
 from TSV data files with an intuitive UI and powerful configuration options.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Lallu Anthoor"
 __email__ = "dev@spendly.co.in"
 __license__ = "MIT"
 
-# Import core modules when they are implemented
-# from plottini.core.parser import TSVParser, ParserConfig
-# from plottini.core.plotter import Plotter, PlotConfig, ChartType
-# from plottini.core.exporter import Exporter, ExportFormat, ExportConfig
+# Core data handling
+from plottini.core.dataframe import Column, DataFrame, create_empty_dataframe
+from plottini.core.exporter import ExportConfig, Exporter, ExportFormat
+from plottini.core.parser import ParserConfig, TSVParser
+
+# Custom exceptions
+from plottini.utils.errors import ExportError, ParseError, ValidationError
 
 __all__ = [
+    # Metadata
     "__version__",
-    # "TSVParser",
-    # "ParserConfig",
-    # "Plotter",
-    # "PlotConfig",
-    # "ChartType",
-    # "Exporter",
-    # "ExportFormat",
-    # "ExportConfig",
+    # Parser
+    "TSVParser",
+    "ParserConfig",
+    # DataFrame
+    "DataFrame",
+    "Column",
+    "create_empty_dataframe",
+    # Exporter
+    "Exporter",
+    "ExportFormat",
+    "ExportConfig",
+    # Exceptions
+    "ParseError",
+    "ValidationError",
+    "ExportError",
 ]

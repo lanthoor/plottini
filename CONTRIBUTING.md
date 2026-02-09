@@ -10,6 +10,7 @@ Thank you for your interest in contributing to Plottini! This document provides 
 - [Development Workflow](#development-workflow)
 - [Code Quality](#code-quality)
 - [Testing](#testing)
+- [Commit Message Format](#commit-message-format)
 - [Pull Request Process](#pull-request-process)
 - [Project Structure](#project-structure)
 - [Implementation Plan](#implementation-plan)
@@ -102,9 +103,11 @@ mypy src/plottini
 4. **Commit and push**
 ```bash
 git add .
-git commit -m "Brief description of changes"
+git commit -m "feat: add support for CSV parsing"
 git push origin main  # or your branch name
 ```
+
+> **Note**: We use [Conventional Commits](https://www.conventionalcommits.org/). See [Commit Message Format](#commit-message-format) below.
 
 5. **Create Pull Request**
    - Go to GitHub and create a PR
@@ -190,6 +193,94 @@ def test_parser_validates_numeric_data():
     
     assert "invalid numeric value" in str(exc_info.value).lower()
 ```
+
+---
+
+## Commit Message Format
+
+We use [Conventional Commits](https://www.conventionalcommits.org/) for all commit messages. This enables automatic changelog generation and semantic versioning.
+
+### Format
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+### Types
+
+| Type | Description | Version Bump |
+|------|-------------|--------------|
+| `feat` | New feature | Minor |
+| `fix` | Bug fix | Patch |
+| `docs` | Documentation only | None |
+| `style` | Formatting, no logic change | None |
+| `refactor` | Code refactoring | None |
+| `perf` | Performance improvement | Patch |
+| `test` | Adding/updating tests | None |
+| `chore` | Build, CI, tooling | None |
+
+### Scope (Optional)
+
+The scope provides additional context about what part of the codebase is affected:
+
+- `parser` - TSV parser module
+- `dataframe` - DataFrame module
+- `exporter` - Export functionality
+- `plotter` - Plotting functionality
+- `ui` - User interface
+- `config` - Configuration system
+- `cli` - Command-line interface
+- `deps` - Dependencies
+
+### Subject
+
+- Use imperative mood ("add" not "added")
+- Don't capitalize first letter
+- No period at the end
+- Max 50 characters
+
+### Examples
+
+```bash
+# Feature
+git commit -m "feat(parser): add support for CSV delimiter"
+
+# Bug fix
+git commit -m "fix(exporter): correct DPI handling for PNG export"
+
+# Documentation
+git commit -m "docs: update installation instructions"
+
+# Breaking change (add ! after type)
+git commit -m "feat(parser)!: change default delimiter to comma"
+
+# With body for more context
+git commit -m "fix(dataframe): handle empty column names
+
+Previously, empty column names caused a KeyError.
+Now they are automatically named 'Column N'.
+
+Fixes #42"
+```
+
+### Breaking Changes
+
+For breaking changes:
+1. Add `!` after type/scope: `feat(parser)!: ...`
+2. Or add `BREAKING CHANGE:` in the footer
+
+### Pull Request Titles
+
+**PR titles must also follow conventional commit format.** When PRs are squash-merged, the PR title becomes the commit message in `main`.
+
+Examples:
+- `feat(parser): add CSV delimiter support`
+- `fix(exporter): correct PNG DPI handling`
+- `docs: update installation guide`
 
 ---
 
