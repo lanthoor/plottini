@@ -128,12 +128,27 @@ class DataFrame:
             expression: Mathematical expression to evaluate.
 
         Raises:
-            NotImplementedError: This feature is not yet implemented.
+            ExpressionError: If expression is invalid or evaluation fails.
         """
-        raise NotImplementedError(
-            "Derived columns are not yet implemented. "
-            "This feature will be available in a future release."
+        from plottini.core.transforms import evaluate_expression
+
+        # Build columns dict for expression evaluation
+        column_data = {col_name: self[col_name] for col_name in self.columns}
+
+        # Evaluate expression
+        result = evaluate_expression(expression, column_data)
+
+        # Create new derived column
+        new_column = Column(
+            name=name,
+            index=len(self.columns),
+            data=result,
+            is_derived=True,
         )
+
+        # Add to DataFrame
+        self.columns[name] = new_column
+        self._column_order.append(name)
 
     def filter_rows(
         self,

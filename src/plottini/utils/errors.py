@@ -119,4 +119,28 @@ class ExportError(Exception):
         return "\n".join(parts)
 
 
-__all__ = ["ParseError", "ValidationError", "ExportError"]
+@dataclass
+class ExpressionError(Exception):
+    """Error raised when expression evaluation fails.
+
+    Attributes:
+        message: Human-readable error description
+        expression: The expression that failed (optional)
+        detail: Additional detail about the error (optional)
+    """
+
+    message: str
+    expression: str | None = None
+    detail: str | None = None
+
+    def __str__(self) -> str:
+        """Format expression error message."""
+        parts = [f"ExpressionError: {self.message}"]
+        if self.expression is not None:
+            parts.append(f"  Expression: '{self.expression}'")
+        if self.detail is not None:
+            parts.append(f"  Detail: {self.detail}")
+        return "\n".join(parts)
+
+
+__all__ = ["ParseError", "ValidationError", "ExportError", "ExpressionError"]

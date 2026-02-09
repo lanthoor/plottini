@@ -1,0 +1,8 @@
+# Categorical data for bar chart testing
+# Index-based categories with sales values
+Index	Sales	Profit
+1	4500	890
+2	3200	640
+3	2800	420
+4	1500	380
+5	2100	520

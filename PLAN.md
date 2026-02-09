@@ -437,68 +437,200 @@ Implementation order based on user needs:
 
 ---
 
-## Phase 1: Core Foundation
+## Phase 1: Core Foundation ✅
 
 **Priority**: Critical  
 **Goal**: Implement core data handling and basic visualization
 
 | # | Task | Status | Files | Estimated Time |
 |---|------|--------|-------|----------------|
-| 1.1 | Implement TSV Parser | ⬜ | `src/plottini/core/parser.py`<br>`tests/test_parser.py` | 2 hours |
-| 1.2 | Create test fixtures | ⬜ | `tests/fixtures/*.tsv` | 0.5 hours |
-| 1.3 | Implement DataFrame | ⬜ | `src/plottini/core/dataframe.py`<br>`tests/test_dataframe.py` | 1.5 hours |
-| 1.4 | Implement Exporter | ⬜ | `src/plottini/core/exporter.py`<br>`tests/test_exporter.py` | 1 hour |
-| 1.5 | Create custom exceptions | ⬜ | `src/plottini/utils/errors.py` | 0.5 hours |
+| 1.1 | Implement TSV Parser | ✅ | `src/plottini/core/parser.py`<br>`tests/test_parser.py` | 2 hours |
+| 1.2 | Create test fixtures | ✅ | `tests/fixtures/*.tsv` | 0.5 hours |
+| 1.3 | Implement DataFrame | ✅ | `src/plottini/core/dataframe.py`<br>`tests/test_dataframe.py` | 1.5 hours |
+| 1.4 | Implement Exporter | ✅ | `src/plottini/core/exporter.py`<br>`tests/test_exporter.py` | 1 hour |
+| 1.5 | Create custom exceptions | ✅ | `src/plottini/utils/errors.py`<br>`tests/test_errors.py` | 0.5 hours |
 
-**Phase 1 Total**: ~5.5 hours
+**Phase 1 Status**: ✅ Complete
 
 ---
 
-## Phase 2a: Core Plotting - First Charts
+## Phase 2a: Core Plotting - First Charts ✅
 
 **Priority**: High  
 **Goal**: Basic plotting functionality with essential chart types
 
+**Dependencies**: Phase 1 (Complete)
+
 | # | Task | Status | Files | Estimated Time |
 |---|------|--------|-------|----------------|
-| 2a.1 | Implement Plotter base + Line chart | ⬜ | `src/plottini/core/plotter.py`<br>`tests/test_plotter.py` | 1.5 hours |
-| 2a.2 | Add Bar chart support | ⬜ | `src/plottini/core/plotter.py` | 1 hour |
-| 2a.3 | Add Pie chart support | ⬜ | `src/plottini/core/plotter.py` | 1 hour |
-| 2a.4 | Implement Transforms module | ⬜ | `src/plottini/core/transforms.py`<br>`tests/test_transforms.py` | 1 hour |
-| 2a.5 | Implement safe expression evaluator | ⬜ | `src/plottini/core/transforms.py` | 2 hours |
+| 2a.1 | Implement Plotter base + Line chart | ✅ | `src/plottini/core/plotter.py`<br>`tests/test_plotter.py` | 1.5 hours |
+| 2a.2 | Add Bar chart support | ✅ | `src/plottini/core/plotter.py` | 1 hour |
+| 2a.3 | Add Pie chart support | ✅ | `src/plottini/core/plotter.py` | 1 hour |
+| 2a.4 | Implement Transforms module | ✅ | `src/plottini/core/transforms.py`<br>`tests/test_transforms.py` | 1 hour |
+| 2a.5 | Implement safe expression evaluator | ✅ | `src/plottini/core/transforms.py`<br>`src/plottini/utils/errors.py` | 2 hours |
+| 2a.6 | Integrate expression evaluator with DataFrame | ✅ | `src/plottini/core/dataframe.py`<br>`tests/test_dataframe.py` | 0.5 hours |
 
-**Phase 2a Total**: ~6.5 hours
+**Phase 2a Status**: ✅ Complete
+
+### Phase 2a Implementation Details
+
+#### Task 2a.1: Plotter Base + Line Chart
+
+**Classes to implement:**
+- `ChartType` enum with LINE, BAR, PIE values
+- `SeriesConfig` dataclass for series configuration
+- `PlotConfig` dataclass for plot settings
+- `Plotter` class with `create_figure()` method
+
+**Publication-quality defaults:**
+- Colorblind-safe 8-color palette: `['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#F0E442', '#56B4E9', '#D55E00', '#000000']`
+- White background, grid enabled
+- Figure size: 10x6 inches
+
+**Plotter module structure:**
+```python
+# src/plottini/core/plotter.py
+
+from enum import Enum
+from dataclasses import dataclass, field
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
+
+class ChartType(Enum):
+    LINE = "line"
+    BAR = "bar"
+    PIE = "pie"
+
+@dataclass
+class SeriesConfig:
+    x_column: str
+    y_column: str
+    label: str | None = None
+    color: str | None = None
+    line_style: str = "-"
+    marker: str | None = None
+    line_width: float = 1.5
+    use_secondary_y: bool = False
+    source_file_index: int = 0
+
+@dataclass 
+class PlotConfig:
+    chart_type: ChartType = ChartType.LINE
+    title: str = ""
+    x_label: str = ""
+    y_label: str = ""
+    figure_width: float = 10.0
+    figure_height: float = 6.0
+    show_grid: bool = True
+    show_legend: bool = True
+
+COLORBLIND_PALETTE = [
+    '#0072B2',  # Blue
+    '#E69F00',  # Orange
+    '#009E73',  # Green
+    '#CC79A7',  # Pink
+    '#F0E442',  # Yellow
+    '#56B4E9',  # Light blue
+    '#D55E00',  # Red-orange
+    '#000000',  # Black
+]
+```
+
+#### Task 2a.4-2a.5: Transforms and Expression Evaluator
+
+**Security requirements (CRITICAL):**
+- Use AST parsing with whitelist approach
+- **NEVER** use `eval()` or `exec()`
+- Allow only: arithmetic operators, numeric literals, column references, whitelisted functions
+- Reject: imports, attribute access, function calls outside whitelist
+
+**Allowed operations:**
+- Binary: `+`, `-`, `*`, `/`, `**`, `%`
+- Unary: `-x`, `+x`
+- Functions: `log`, `log10`, `log2`, `sqrt`, `abs`, `sin`, `cos`, `tan`, `exp`
+
+**Expression syntax:**
+- Column references: `col1`, `col2`, `"Column Name With Spaces"`
+- Examples: `col1 / col2`, `sqrt(col1**2 + col2**2)`, `log10(col1)`
+
+**Safe expression evaluator implementation:**
+```python
+# Allowed AST node types
+ALLOWED_NODES = {
+    ast.Expression,  # Top-level
+    ast.BinOp,       # a + b, a * b, etc.
+    ast.UnaryOp,     # -x, +x
+    ast.Num,         # Legacy numeric literals (Python < 3.8)
+    ast.Constant,    # Numeric literals (Python >= 3.8)
+    ast.Name,        # Column references
+    ast.Call,        # Function calls (validated separately)
+    ast.Load,        # Variable loading context
+}
+
+# Allowed binary operators
+ALLOWED_BINOPS = {ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod}
+
+# Allowed unary operators  
+ALLOWED_UNARYOPS = {ast.USub, ast.UAdd}
+
+# Allowed function names
+ALLOWED_FUNCTIONS = {'log', 'log10', 'log2', 'sqrt', 'abs', 'sin', 'cos', 'tan', 'exp'}
+```
+
+**What to reject:**
+- `ast.Attribute` - No attribute access (e.g., `os.system`)
+- `ast.Import` / `ast.ImportFrom` - No imports
+- `ast.Lambda` - No lambda functions
+- Any function call not in `ALLOWED_FUNCTIONS`
+
+**Testing edge cases:**
+```python
+def test_log_of_negative_raises():
+    """log of negative numbers should raise or return NaN."""
+    
+def test_division_by_zero():
+    """Division by zero should handle gracefully (inf or error)."""
+    
+def test_invalid_expression_rejected():
+    """Dangerous expressions must be rejected."""
+    expressions_to_reject = [
+        "__import__('os')",
+        "os.system('rm -rf /')",
+        "lambda x: x",
+        "().__class__.__bases__[0]",
+    ]
+```
 
 ---
 
-## Phase 2b: Extended Chart Types
+## Phase 2b: Extended Chart Types ✅
 
 **Priority**: High  
 **Goal**: Add scientific chart types
 
 | # | Task | Status | Files | Estimated Time |
 |---|------|--------|-------|----------------|
-| 2b.1 | Add Polar/Radial chart | ⬜ | `src/plottini/core/plotter.py` | 1 hour |
-| 2b.2 | Add Histogram support | ⬜ | `src/plottini/core/plotter.py` | 1 hour |
-| 2b.3 | Add Scatter plot support | ⬜ | `src/plottini/core/plotter.py` | 1 hour |
+| 2b.1 | Add Polar/Radial chart | ✅ | `src/plottini/core/plotter.py` | 1 hour |
+| 2b.2 | Add Histogram support | ✅ | `src/plottini/core/plotter.py` | 1 hour |
+| 2b.3 | Add Scatter plot support | ✅ | `src/plottini/core/plotter.py` | 1 hour |
 
-**Phase 2b Total**: ~3 hours
+**Phase 2b Status**: ✅ Complete
 
 ---
 
-## Phase 2c: Remaining Chart Types
+## Phase 2c: Remaining Chart Types ✅
 
 **Priority**: Medium  
 **Goal**: Complete chart type coverage
 
 | # | Task | Status | Files | Estimated Time |
 |---|------|--------|-------|----------------|
-| 2c.1 | Add Box plot | ⬜ | `src/plottini/core/plotter.py` | 0.5 hours |
-| 2c.2 | Add Violin plot | ⬜ | `src/plottini/core/plotter.py` | 0.5 hours |
-| 2c.3 | Add Area chart | ⬜ | `src/plottini/core/plotter.py` | 0.5 hours |
-| 2c.4 | Add remaining types (Stem, Step, Error bar, Bar horizontal) | ⬜ | `src/plottini/core/plotter.py` | 1.5 hours |
+| 2c.1 | Add Box plot | ✅ | `src/plottini/core/plotter.py` | 0.5 hours |
+| 2c.2 | Add Violin plot | ✅ | `src/plottini/core/plotter.py` | 0.5 hours |
+| 2c.3 | Add Area chart | ✅ | `src/plottini/core/plotter.py` | 0.5 hours |
+| 2c.4 | Add remaining types (Stem, Step, Error bar, Bar horizontal) | ✅ | `src/plottini/core/plotter.py` | 1.5 hours |
 
-**Phase 2c Total**: ~3 hours
+**Phase 2c Status**: ✅ Complete
 
 ---
 
@@ -566,23 +698,32 @@ Implementation order based on user needs:
 | Phase | Status | Progress | Total Time |
 |-------|--------|----------|------------|
 | Phase 0: Setup | ✅ Complete | 10/10 | - |
-| Phase 1: Core Foundation | ⬜ Not Started | 0/5 | 5.5 hours |
-| Phase 2a: First Charts | ⬜ Not Started | 0/5 | 6.5 hours |
-| Phase 2b: Extended Charts | ⬜ Not Started | 0/3 | 3 hours |
-| Phase 2c: Remaining Charts | ⬜ Not Started | 0/4 | 3 hours |
+| Phase 1: Core Foundation | ✅ Complete | 5/5 | 5.5 hours |
+| Phase 2a: First Charts | ✅ Complete | 6/6 | 7 hours |
+| Phase 2b: Extended Charts | ✅ Complete | 3/3 | 3 hours |
+| Phase 2c: Remaining Charts | ✅ Complete | 4/4 | 3 hours |
 | Phase 3: Advanced Features | ⬜ Not Started | 0/6 | 7 hours |
 | Phase 4: UI | ⬜ Not Started | 0/11 | 16 hours |
 | Phase 5: Polish | ⬜ Not Started | 0/6 | 9.5 hours |
-| **TOTAL** | **2% Complete** | **10/50** | **~50 hours** |
+| **TOTAL** | **55% Complete** | **28/45** | **~51 hours** |
 
 ---
 
 ## Next Steps
 
-**Current Phase**: Phase 1 - Core Foundation
+**Current Phase**: Phase 3 - Advanced Data Features
 
-**Next Task**: Implement TSV Parser (Task 1.1)
-- File: `src/plottini/core/parser.py`
-- Tests: `tests/test_parser.py`
-- Duration: ~2 hours
-- See AGENTS.md for development workflow
+**Next Task**: Implement data filtering (Task 3.1)
+- File: `src/plottini/core/dataframe.py`
+- Duration: ~1 hour
+
+### Task Order for Phase 3
+
+Execute tasks in this order:
+
+1. **3.1**: Data filtering
+2. **3.2**: Multi-file alignment
+3. **3.3**: Secondary Y-axis
+4. **3.4**: Configuration schema
+5. **3.5**: TOML loader/saver
+6. **3.6**: Defaults
