@@ -187,23 +187,39 @@ ruff format src/ tests/
 
 ### 5. Commit Changes
 
+We use [Conventional Commits](https://www.conventionalcommits.org/) for all commit messages.
+
 ```bash
 # Add files
 git add .
 
-# Commit with descriptive message
-git commit -m "feat: implement TSV parser with validation"
+# Commit with conventional commit format
+git commit -m "feat(parser): implement TSV parser with validation"
 # or
-git commit -m "fix: handle empty files in parser"
+git commit -m "fix(parser): handle empty files gracefully"
 ```
 
-**Commit message format:**
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `docs:` - Documentation changes
-- `test:` - Test additions/changes
-- `refactor:` - Code refactoring
-- `chore:` - Build/tooling changes
+**Commit message format:** `<type>(<scope>): <subject>`
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `feat` | New feature | `feat(exporter): add PDF export support` |
+| `fix` | Bug fix | `fix(parser): handle scientific notation` |
+| `docs` | Documentation | `docs: update README installation` |
+| `style` | Formatting | `style: fix indentation in parser.py` |
+| `refactor` | Code restructure | `refactor(dataframe): simplify column access` |
+| `perf` | Performance | `perf(parser): optimize large file parsing` |
+| `test` | Tests | `test(exporter): add PNG export tests` |
+| `chore` | Build/tooling | `chore: update CI workflow` |
+
+**Scopes:** `parser`, `dataframe`, `exporter`, `plotter`, `ui`, `config`, `cli`, `deps`
+
+**Rules:**
+- Use imperative mood: "add" not "added"
+- No capitalization at start
+- No period at end
+- Max 50 characters for subject line
+- Add `!` after type for breaking changes: `feat(parser)!: change API`
 
 ### 6. Push and Create PR
 
