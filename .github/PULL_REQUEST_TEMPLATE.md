@@ -1,5 +1,11 @@
 ## Summary
 
+<!-- 
+PR TITLE FORMAT: Use conventional commit format for the PR title.
+Example: feat(parser): add CSV delimiter support
+         fix(exporter): correct PNG DPI handling
+-->
+
 <!-- Brief description of what this PR does -->
 
 ## Changes
@@ -42,7 +48,8 @@
 
 ## Checklist
 
+- [ ] PR title follows conventional commit format (`type(scope): subject`)
 - [ ] I have read the [CONTRIBUTING.md](../CONTRIBUTING.md) guidelines
-- [ ] I have followed the conventional commit format
+- [ ] I have followed the conventional commit format for commits
 - [ ] I have updated documentation if needed
 - [ ] I have not added features outside the scope of PLAN.md

@@ -228,8 +228,11 @@ git commit -m "fix(parser): handle empty files gracefully"
 git push origin feature/your-branch-name
 
 # Create PR via GitHub UI or gh CLI
-gh pr create --title "Implement TSV parser" --body "Implements Phase 1: TSV parser with validation and error handling"
+# NOTE: PR title must follow conventional commit format
+gh pr create --title "feat(parser): implement TSV parser with validation" --body "Implements Phase 1: TSV parser with validation and error handling"
 ```
+
+**PR Title Format:** PR titles must follow conventional commit format (`<type>(<scope>): <subject>`). When PRs are squash-merged, the title becomes the commit message in `main`.
 
 ### 7. After PR is Merged
 

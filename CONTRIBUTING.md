@@ -273,6 +273,15 @@ For breaking changes:
 1. Add `!` after type/scope: `feat(parser)!: ...`
 2. Or add `BREAKING CHANGE:` in the footer
 
+### Pull Request Titles
+
+**PR titles must also follow conventional commit format.** When PRs are squash-merged, the PR title becomes the commit message in `main`.
+
+Examples:
+- `feat(parser): add CSV delimiter support`
+- `fix(exporter): correct PNG DPI handling`
+- `docs: update installation guide`
+
 ---
 
 ## Pull Request Process
