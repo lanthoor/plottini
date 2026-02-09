@@ -236,6 +236,20 @@ class TestParserEdgeCases:
         assert names[1] == "Energy_eV"
         assert names[2] == "DOS_states_per_eV"
 
+    def test_duplicate_column_names_raises_error(self, tmp_path: Path) -> None:
+        """Test that duplicate column names raise ParseError."""
+        file = tmp_path / "duplicate_headers.tsv"
+        file.write_text("col_a\tcol_b\tcol_a\n1.0\t2.0\t3.0\n")
+
+        parser = TSVParser()
+        with pytest.raises(ParseError) as exc_info:
+            parser.parse(file)
+
+        error = exc_info.value
+        assert "Duplicate column name" in error.message
+        assert "col_a" in error.message
+        assert error.column == 3  # Third column is the duplicate
+
 
 class TestParseErrorFormat:
     """Tests for ParseError formatting in parser context."""

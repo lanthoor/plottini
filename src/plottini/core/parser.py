@@ -88,6 +88,20 @@ class TSVParser:
         if self.config.has_header:
             header_line, header_line_num = data_lines[0]
             column_names = self._parse_header(header_line)
+            # Validate that header column names are unique to prevent
+            # silent overwriting when constructing the DataFrame.columns dict.
+            seen: set[str] = set()
+            for col_idx, name in enumerate(column_names, start=1):
+                if name in seen:
+                    raise ParseError(
+                        file_path=path,
+                        line_number=header_line_num,
+                        column=col_idx,
+                        message=f"Duplicate column name '{name}' in header",
+                        raw_value=name,
+                        context_line=header_line,
+                    )
+                seen.add(name)
             data_lines = data_lines[1:]
         else:
             # Determine column count from first data line

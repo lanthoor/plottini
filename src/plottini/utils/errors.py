@@ -45,13 +45,14 @@ class ParseError(Exception):
             location += f": got '{self.raw_value}'"
         parts.append(location)
 
-        if self.context_line is not None and self.column is not None:
+        if self.context_line is not None:
             parts.append(f'  Context: "{self.context_line}"')
-            # Create pointer to the error location
-            pointer_offset = len('  Context: "') + self._find_value_position()
-            pointer_length = len(self.raw_value) if self.raw_value else 1
-            pointer = " " * pointer_offset + "^" * pointer_length
-            parts.append(pointer)
+            if self.column is not None:
+                # Create pointer to the error location
+                pointer_offset = len('  Context: "') + self._find_value_position()
+                pointer_length = len(self.raw_value) if self.raw_value else 1
+                pointer = " " * pointer_offset + "^" * pointer_length
+                parts.append(pointer)
 
         return "\n".join(parts)
 

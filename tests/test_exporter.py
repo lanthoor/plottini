@@ -224,11 +224,20 @@ class TestExporterErrors:
     """Tests for exporter error handling."""
 
     def test_export_invalid_directory_raises_error(
-        self, sample_figure: Figure, exporter: Exporter
+        self,
+        sample_figure: Figure,
+        exporter: Exporter,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that invalid directory raises ExportError."""
-        # Try to write to a path that can't be created
-        output = Path("/nonexistent_root_dir_12345/test.png")
+
+        # Monkeypatch Path.mkdir to simulate permission error
+        def mock_mkdir(*args: object, **kwargs: object) -> None:
+            raise OSError("Permission denied")
+
+        monkeypatch.setattr(Path, "mkdir", mock_mkdir)
+
+        output = Path("/some/nested/path/test.png")
         config = ExportConfig(format=ExportFormat.PNG)
 
         with pytest.raises(ExportError) as exc_info:
