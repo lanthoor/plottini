@@ -111,19 +111,84 @@ class TestDataFrame:
         """Test is_empty returns False for non-empty DataFrame."""
         assert sample_dataframe.is_empty() is False
 
-    def test_add_derived_column_not_implemented(self, sample_dataframe: DataFrame) -> None:
-        """Test that add_derived_column raises NotImplementedError."""
-        with pytest.raises(NotImplementedError) as exc_info:
-            sample_dataframe.add_derived_column("velocity", "col1 / col2")
-
-        assert "not yet implemented" in str(exc_info.value)
-
     def test_filter_rows_not_implemented(self, sample_dataframe: DataFrame) -> None:
         """Test that filter_rows raises NotImplementedError."""
         with pytest.raises(NotImplementedError) as exc_info:
             sample_dataframe.filter_rows("Energy_eV", min_val=-5.0, max_val=-4.0)
 
         assert "not yet implemented" in str(exc_info.value)
+
+
+class TestAddDerivedColumn:
+    """Tests for add_derived_column method."""
+
+    @pytest.fixture
+    def sample_dataframe(self) -> DataFrame:
+        """Create a sample DataFrame for testing."""
+        col1 = Column(
+            name="x",
+            index=0,
+            data=np.array([1.0, 2.0, 3.0], dtype=np.float64),
+        )
+        col2 = Column(
+            name="y",
+            index=1,
+            data=np.array([10.0, 20.0, 30.0], dtype=np.float64),
+        )
+        return DataFrame(
+            columns={"x": col1, "y": col2},
+            source_file=Path("test.tsv"),
+            row_count=3,
+        )
+
+    def test_add_derived_column_simple(self, sample_dataframe: DataFrame) -> None:
+        """Test adding a derived column with simple expression."""
+        sample_dataframe.add_derived_column("sum", "x + y")
+
+        assert "sum" in sample_dataframe
+        np.testing.assert_array_almost_equal(
+            sample_dataframe["sum"],
+            [11.0, 22.0, 33.0],
+        )
+
+    def test_add_derived_column_is_derived_true(self, sample_dataframe: DataFrame) -> None:
+        """Test that derived column has is_derived=True."""
+        sample_dataframe.add_derived_column("product", "x * y")
+
+        col = sample_dataframe.get_column("product")
+        assert col.is_derived is True
+
+    def test_add_derived_column_added_to_order(self, sample_dataframe: DataFrame) -> None:
+        """Test that derived column is added to column order."""
+        sample_dataframe.add_derived_column("new_col", "x + 1")
+
+        names = sample_dataframe.get_column_names()
+        assert "new_col" in names
+
+    def test_add_derived_column_accessible_via_subscript(self, sample_dataframe: DataFrame) -> None:
+        """Test that derived column is accessible via subscript."""
+        sample_dataframe.add_derived_column("div", "y / x")
+
+        data = sample_dataframe["div"]
+        np.testing.assert_array_almost_equal(data, [10.0, 10.0, 10.0])
+
+    def test_add_derived_column_invalid_expression_raises_error(
+        self, sample_dataframe: DataFrame
+    ) -> None:
+        """Test that invalid expression raises ExpressionError."""
+        from plottini.utils.errors import ExpressionError
+
+        with pytest.raises(ExpressionError):
+            sample_dataframe.add_derived_column("bad", "__import__('os')")
+
+    def test_add_derived_column_undefined_column_raises_error(
+        self, sample_dataframe: DataFrame
+    ) -> None:
+        """Test that undefined column raises ExpressionError."""
+        from plottini.utils.errors import ExpressionError
+
+        with pytest.raises(ExpressionError):
+            sample_dataframe.add_derived_column("bad", "x + undefined")
 
 
 class TestEmptyDataFrame:
