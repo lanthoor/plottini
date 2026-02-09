@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -e ".[dev]"
+    
+    - name: Run linting with ruff
+      run: |
+        ruff check src/ tests/
+    
+    - name: Run type checking with mypy
+      run: |
+        mypy src/plottini
+      continue-on-error: true  # Don't fail CI on type errors yet (modules not implemented)
+    
+    - name: Run tests with pytest
+      run: |
+        pytest --cov=plottini --cov-report=xml --cov-report=term
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      if: matrix.python-version == '3.10'
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+      continue-on-error: true
+
+  build:
+    name: Build package
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    
+    - name: Install build dependencies
+      run: pip install build hatchling
+    
+    - name: Build package
+      run: python -m build
+    
+    - name: Check package metadata
+      run: |
+        pip install twine
+        twine check dist/*
