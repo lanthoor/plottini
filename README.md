@@ -61,14 +61,6 @@ cd plottini
 pip install -e .
 ```
 
-### Development Installation
-
-```bash
-git clone https://github.com/lanthoor/plottini.git
-cd plottini
-pip install -e ".[dev]"
-```
-
 ---
 
 ## Quick Start
@@ -190,7 +182,7 @@ Or render directly:
 plottini render --config my-graph.toml --output velocity.png
 ```
 
-See the [configuration documentation](AGENTS.md#3-configuration-system) for full details.
+See [PLAN.md](PLAN.md) for the complete configuration specification.
 
 ---
 
@@ -231,53 +223,40 @@ Available preset transformations:
 
 ---
 
-## Development
+## Documentation
 
-### Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/lanthoor/plottini.git
-cd plottini
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install in development mode
-pip install -e ".[dev]"
-```
-
-### Run Tests
-
-```bash
-pytest
-```
-
-### Code Quality
-
-```bash
-# Linting
-ruff check .
-
-# Type checking
-mypy src/plottini
-
-# Format check
-ruff format --check .
-```
+- **[PLAN.md](PLAN.md)** - Complete implementation plan and technical specifications
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development setup and contribution guidelines
+- **[AGENTS.md](AGENTS.md)** - Instructions for AI agents working on the project
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with tests
-4. Run the test suite and linters
-5. Submit a pull request
+- Development setup instructions
+- Code style guidelines
+- Testing requirements
+- Pull request process
+
+---
+
+## Roadmap
+
+See [PLAN.md](PLAN.md) for the detailed implementation plan.
+
+### Current Status: Phase 1 - Core Foundation
+
+- [x] Project structure
+- [x] Package configuration
+- [x] CLI framework
+- [x] CI/CD pipelines
+- [ ] TSV Parser implementation
+- [ ] DataFrame implementation
+- [ ] Basic plotting (Line, Bar, Pie)
+- [ ] Export functionality
+- [ ] UI implementation
 
 ---
 
@@ -285,28 +264,14 @@ Contributions are welcome! Please:
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
----
-
-## Roadmap
-
-See [AGENTS.md](AGENTS.md) for the detailed implementation plan.
-
-### Current Status: Project Setup Complete ✅
-
-- [x] Project structure
-- [x] Package configuration
-- [x] CLI framework
-- [ ] Core parsing (Phase 1)
-- [ ] Basic plotting (Phase 2a)
-- [ ] UI implementation (Phase 4)
-- [ ] Full feature set (Phases 2b-3)
+Copyright (c) 2025 Lallu Anthoor
 
 ---
 
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/lanthoor/plottini/issues)
-- **Documentation**: See [AGENTS.md](AGENTS.md) for technical details
+- **Discussions**: [GitHub Discussions](https://github.com/lanthoor/plottini/discussions)
 - **Author**: Lallu Anthoor (dev@spendly.co.in)
 
 ---
