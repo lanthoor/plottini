@@ -8,15 +8,15 @@
 
 **Plottini** is a user-friendly, UI-driven graph builder that allows non-technical users to create publication-quality graphs from TSV data files using matplotlib as the rendering backend.
 
-| Attribute | Value |
-|-----------|-------|
-| Package name | `plottini` |
-| Author | Lallu Anthoor |
-| License | MIT |
-| Config format | TOML |
-| Python version | >=3.10 |
-| UI framework | NiceGUI |
-| Backend | matplotlib |
+| Attribute      | Value         |
+|----------------|---------------|
+| Package name   | `plottini`    |
+| Author         | Lallu Anthoor |
+| License        | MIT           |
+| Config format  | TOML          |
+| Python version | >=3.10        |
+| UI framework   | NiceGUI       |
+| Backend        | matplotlib    |
 
 ---
 
@@ -383,13 +383,13 @@ plottini version
 
 ### 4.1 Technology Choices
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Config format | TOML | Python-native, readable, stdlib support |
-| Expression safety | AST whitelist | Prevents code injection, math-only |
-| State management | Dataclass + callbacks | Simple, no extra dependencies |
-| Color palette | Colorblind-safe | Publication-friendly |
-| Column numbering | 1-based (no headers) | User-friendly for non-programmers |
+| Decision          | Choice                | Rationale                               |
+|-------------------|-----------------------|-----------------------------------------|
+| Config format     | TOML                  | Python-native, readable, stdlib support |
+| Expression safety | AST whitelist         | Prevents code injection, math-only      |
+| State management  | Dataclass + callbacks | Simple, no extra dependencies           |
+| Color palette     | Colorblind-safe       | Publication-friendly                    |
+| Column numbering  | 1-based (no headers)  | User-friendly for non-programmers       |
 
 ### 4.2 Chart Type Priority
 
@@ -420,18 +420,18 @@ Implementation order based on user needs:
 
 ## Phase 0: Project Setup ✅
 
-| # | Task | Status | Files |
-|---|------|--------|-------|
-| 0.1 | Create project structure | ✅ | All directories |
-| 0.2 | Configure pyproject.toml | ✅ | `pyproject.toml` |
-| 0.3 | Create __init__.py files | ✅ | All `__init__.py` |
-| 0.4 | Implement CLI framework | ✅ | `cli.py`, `__main__.py` |
-| 0.5 | Setup GitHub Actions (CI) | ✅ | `.github/workflows/ci.yml` |
-| 0.6 | Setup GitHub Actions (publish) | ✅ | `.github/workflows/publish.yml` |
-| 0.7 | Create LICENSE (MIT) | ✅ | `LICENSE` |
-| 0.8 | Create .gitignore | ✅ | `.gitignore` |
-| 0.9 | Create basic tests | ✅ | `tests/test_basic.py`, `tests/test_cli.py` |
-| 0.10 | Create documentation | ✅ | `README.md`, `PLAN.md`, `CONTRIBUTING.md`, `AGENTS.md` |
+| #    | Task                           | Status | Files                                                  |
+|------|--------------------------------|--------|--------------------------------------------------------|
+| 0.1  | Create project structure       | ✅      | All directories                                        |
+| 0.2  | Configure pyproject.toml       | ✅      | `pyproject.toml`                                       |
+| 0.3  | Create __init__.py files       | ✅      | All `__init__.py`                                      |
+| 0.4  | Implement CLI framework        | ✅      | `cli.py`, `__main__.py`                                |
+| 0.5  | Setup GitHub Actions (CI)      | ✅      | `.github/workflows/ci.yml`                             |
+| 0.6  | Setup GitHub Actions (publish) | ✅      | `.github/workflows/publish.yml`                        |
+| 0.7  | Create LICENSE (MIT)           | ✅      | `LICENSE`                                              |
+| 0.8  | Create .gitignore              | ✅      | `.gitignore`                                           |
+| 0.9  | Create basic tests             | ✅      | `tests/test_basic.py`, `tests/test_cli.py`             |
+| 0.10 | Create documentation           | ✅      | `README.md`, `PLAN.md`, `CONTRIBUTING.md`, `AGENTS.md` |
 
 **Phase 0 Status**: ✅ Complete
 
@@ -442,13 +442,13 @@ Implementation order based on user needs:
 **Priority**: Critical  
 **Goal**: Implement core data handling and basic visualization
 
-| # | Task | Status | Files | Estimated Time |
-|---|------|--------|-------|----------------|
-| 1.1 | Implement TSV Parser | ✅ | `src/plottini/core/parser.py`<br>`tests/test_parser.py` | 2 hours |
-| 1.2 | Create test fixtures | ✅ | `tests/fixtures/*.tsv` | 0.5 hours |
-| 1.3 | Implement DataFrame | ✅ | `src/plottini/core/dataframe.py`<br>`tests/test_dataframe.py` | 1.5 hours |
-| 1.4 | Implement Exporter | ✅ | `src/plottini/core/exporter.py`<br>`tests/test_exporter.py` | 1 hour |
-| 1.5 | Create custom exceptions | ✅ | `src/plottini/utils/errors.py`<br>`tests/test_errors.py` | 0.5 hours |
+| #   | Task                     | Status | Files                                                         | Estimated Time |
+|-----|--------------------------|--------|---------------------------------------------------------------|----------------|
+| 1.1 | Implement TSV Parser     | ✅      | `src/plottini/core/parser.py`<br>`tests/test_parser.py`       | 2 hours        |
+| 1.2 | Create test fixtures     | ✅      | `tests/fixtures/*.tsv`                                        | 0.5 hours      |
+| 1.3 | Implement DataFrame      | ✅      | `src/plottini/core/dataframe.py`<br>`tests/test_dataframe.py` | 1.5 hours      |
+| 1.4 | Implement Exporter       | ✅      | `src/plottini/core/exporter.py`<br>`tests/test_exporter.py`   | 1 hour         |
+| 1.5 | Create custom exceptions | ✅      | `src/plottini/utils/errors.py`<br>`tests/test_errors.py`      | 0.5 hours      |
 
 **Phase 1 Status**: ✅ Complete
 
@@ -461,14 +461,14 @@ Implementation order based on user needs:
 
 **Dependencies**: Phase 1 (Complete)
 
-| # | Task | Status | Files | Estimated Time |
-|---|------|--------|-------|----------------|
-| 2a.1 | Implement Plotter base + Line chart | ✅ | `src/plottini/core/plotter.py`<br>`tests/test_plotter.py` | 1.5 hours |
-| 2a.2 | Add Bar chart support | ✅ | `src/plottini/core/plotter.py` | 1 hour |
-| 2a.3 | Add Pie chart support | ✅ | `src/plottini/core/plotter.py` | 1 hour |
-| 2a.4 | Implement Transforms module | ✅ | `src/plottini/core/transforms.py`<br>`tests/test_transforms.py` | 1 hour |
-| 2a.5 | Implement safe expression evaluator | ✅ | `src/plottini/core/transforms.py`<br>`src/plottini/utils/errors.py` | 2 hours |
-| 2a.6 | Integrate expression evaluator with DataFrame | ✅ | `src/plottini/core/dataframe.py`<br>`tests/test_dataframe.py` | 0.5 hours |
+| #    | Task                                          | Status | Files                                                               | Estimated Time |
+|------|-----------------------------------------------|--------|---------------------------------------------------------------------|----------------|
+| 2a.1 | Implement Plotter base + Line chart           | ✅      | `src/plottini/core/plotter.py`<br>`tests/test_plotter.py`           | 1.5 hours      |
+| 2a.2 | Add Bar chart support                         | ✅      | `src/plottini/core/plotter.py`                                      | 1 hour         |
+| 2a.3 | Add Pie chart support                         | ✅      | `src/plottini/core/plotter.py`                                      | 1 hour         |
+| 2a.4 | Implement Transforms module                   | ✅      | `src/plottini/core/transforms.py`<br>`tests/test_transforms.py`     | 1 hour         |
+| 2a.5 | Implement safe expression evaluator           | ✅      | `src/plottini/core/transforms.py`<br>`src/plottini/utils/errors.py` | 2 hours        |
+| 2a.6 | Integrate expression evaluator with DataFrame | ✅      | `src/plottini/core/dataframe.py`<br>`tests/test_dataframe.py`       | 0.5 hours      |
 
 **Phase 2a Status**: ✅ Complete
 
@@ -608,11 +608,11 @@ def test_invalid_expression_rejected():
 **Priority**: High  
 **Goal**: Add scientific chart types
 
-| # | Task | Status | Files | Estimated Time |
-|---|------|--------|-------|----------------|
-| 2b.1 | Add Polar/Radial chart | ✅ | `src/plottini/core/plotter.py` | 1 hour |
-| 2b.2 | Add Histogram support | ✅ | `src/plottini/core/plotter.py` | 1 hour |
-| 2b.3 | Add Scatter plot support | ✅ | `src/plottini/core/plotter.py` | 1 hour |
+| #    | Task                     | Status | Files                          | Estimated Time |
+|------|--------------------------|--------|--------------------------------|----------------|
+| 2b.1 | Add Polar/Radial chart   | ✅      | `src/plottini/core/plotter.py` | 1 hour         |
+| 2b.2 | Add Histogram support    | ✅      | `src/plottini/core/plotter.py` | 1 hour         |
+| 2b.3 | Add Scatter plot support | ✅      | `src/plottini/core/plotter.py` | 1 hour         |
 
 **Phase 2b Status**: ✅ Complete
 
@@ -623,32 +623,32 @@ def test_invalid_expression_rejected():
 **Priority**: Medium  
 **Goal**: Complete chart type coverage
 
-| # | Task | Status | Files | Estimated Time |
-|---|------|--------|-------|----------------|
-| 2c.1 | Add Box plot | ✅ | `src/plottini/core/plotter.py` | 0.5 hours |
-| 2c.2 | Add Violin plot | ✅ | `src/plottini/core/plotter.py` | 0.5 hours |
-| 2c.3 | Add Area chart | ✅ | `src/plottini/core/plotter.py` | 0.5 hours |
-| 2c.4 | Add remaining types (Stem, Step, Error bar, Bar horizontal) | ✅ | `src/plottini/core/plotter.py` | 1.5 hours |
+| #    | Task                                                        | Status | Files                          | Estimated Time |
+|------|-------------------------------------------------------------|--------|--------------------------------|----------------|
+| 2c.1 | Add Box plot                                                | ✅      | `src/plottini/core/plotter.py` | 0.5 hours      |
+| 2c.2 | Add Violin plot                                             | ✅      | `src/plottini/core/plotter.py` | 0.5 hours      |
+| 2c.3 | Add Area chart                                              | ✅      | `src/plottini/core/plotter.py` | 0.5 hours      |
+| 2c.4 | Add remaining types (Stem, Step, Error bar, Bar horizontal) | ✅      | `src/plottini/core/plotter.py` | 1.5 hours      |
 
 **Phase 2c Status**: ✅ Complete
 
 ---
 
-## Phase 3: Advanced Data Features
+## Phase 3: Advanced Data Features ✅
 
 **Priority**: High  
 **Goal**: Data manipulation and multi-file support
 
-| # | Task | Status | Files | Estimated Time |
-|---|------|--------|-------|----------------|
-| 3.1 | Implement data filtering | ⬜ | `src/plottini/core/dataframe.py` | 1 hour |
-| 3.2 | Implement multi-file alignment | ⬜ | `src/plottini/core/dataframe.py` | 1.5 hours |
-| 3.3 | Implement secondary Y-axis | ⬜ | `src/plottini/core/plotter.py` | 1 hour |
-| 3.4 | Implement configuration schema | ⬜ | `src/plottini/config/schema.py`<br>`tests/test_config.py` | 1.5 hours |
-| 3.5 | Implement TOML loader/saver | ⬜ | `src/plottini/config/loader.py` | 1.5 hours |
-| 3.6 | Implement defaults | ⬜ | `src/plottini/config/defaults.py` | 0.5 hours |
+| #   | Task                           | Status | Files                                                     | Estimated Time |
+|-----|--------------------------------|--------|-----------------------------------------------------------|----------------|
+| 3.1 | Implement data filtering       | ✅      | `src/plottini/core/dataframe.py`                          | 1 hour         |
+| 3.2 | Implement multi-file alignment | ✅      | `src/plottini/core/dataframe.py`                          | 1.5 hours      |
+| 3.3 | Implement secondary Y-axis     | ✅      | `src/plottini/core/plotter.py`                            | 1 hour         |
+| 3.4 | Implement configuration schema | ✅      | `src/plottini/config/schema.py`<br>`tests/test_config.py` | 1.5 hours      |
+| 3.5 | Implement TOML loader/saver    | ✅      | `src/plottini/config/loader.py`                           | 1.5 hours      |
+| 3.6 | Implement defaults             | ✅      | `src/plottini/config/defaults.py`                         | 0.5 hours      |
 
-**Phase 3 Total**: ~7 hours
+**Phase 3 Status**: ✅ Complete
 
 ---
 
@@ -657,19 +657,19 @@ def test_invalid_expression_rejected():
 **Priority**: High  
 **Goal**: Complete NiceGUI user interface
 
-| # | Task | Status | Files | Estimated Time |
-|---|------|--------|-------|----------------|
-| 4.1 | Create NiceGUI app shell | ⬜ | `src/plottini/ui/app.py` | 1.5 hours |
-| 4.2 | Implement state management | ⬜ | `src/plottini/ui/state.py` | 1.5 hours |
-| 4.3 | Implement file selector | ⬜ | `src/plottini/ui/components/file_selector.py` | 1.5 hours |
-| 4.4 | Implement data preview table | ⬜ | `src/plottini/ui/components/data_preview.py` | 1 hour |
-| 4.5 | Implement series configuration | ⬜ | `src/plottini/ui/components/column_mapper.py` | 2 hours |
-| 4.6 | Implement chart settings panel | ⬜ | `src/plottini/ui/components/chart_config.py` | 1.5 hours |
-| 4.7 | Implement transform UI | ⬜ | `src/plottini/ui/components/transform_panel.py` | 2 hours |
-| 4.8 | Implement live preview | ⬜ | `src/plottini/ui/components/plot_preview.py` | 2 hours |
-| 4.9 | Implement export panel | ⬜ | `src/plottini/ui/components/export_panel.py` | 1 hour |
-| 4.10 | Implement filter dialog | ⬜ | `src/plottini/ui/components/transform_panel.py` | 1 hour |
-| 4.11 | Implement alignment UI | ⬜ | `src/plottini/ui/components/transform_panel.py` | 1 hour |
+| #    | Task                           | Status | Files                                           | Estimated Time |
+|------|--------------------------------|--------|-------------------------------------------------|----------------|
+| 4.1  | Create NiceGUI app shell       | ⬜      | `src/plottini/ui/app.py`                        | 1.5 hours      |
+| 4.2  | Implement state management     | ⬜      | `src/plottini/ui/state.py`                      | 1.5 hours      |
+| 4.3  | Implement file selector        | ⬜      | `src/plottini/ui/components/file_selector.py`   | 1.5 hours      |
+| 4.4  | Implement data preview table   | ⬜      | `src/plottini/ui/components/data_preview.py`    | 1 hour         |
+| 4.5  | Implement series configuration | ⬜      | `src/plottini/ui/components/column_mapper.py`   | 2 hours        |
+| 4.6  | Implement chart settings panel | ⬜      | `src/plottini/ui/components/chart_config.py`    | 1.5 hours      |
+| 4.7  | Implement transform UI         | ⬜      | `src/plottini/ui/components/transform_panel.py` | 2 hours        |
+| 4.8  | Implement live preview         | ⬜      | `src/plottini/ui/components/plot_preview.py`    | 2 hours        |
+| 4.9  | Implement export panel         | ⬜      | `src/plottini/ui/components/export_panel.py`    | 1 hour         |
+| 4.10 | Implement filter dialog        | ⬜      | `src/plottini/ui/components/transform_panel.py` | 1 hour         |
+| 4.11 | Implement alignment UI         | ⬜      | `src/plottini/ui/components/transform_panel.py` | 1 hour         |
 
 **Phase 4 Total**: ~16 hours
 
@@ -680,14 +680,14 @@ def test_invalid_expression_rejected():
 **Priority**: Medium  
 **Goal**: Production readiness
 
-| # | Task | Status | Files | Estimated Time |
-|---|------|--------|-------|----------------|
-| 5.1 | Complete CLI integration | ⬜ | `src/plottini/cli.py` | 1 hour |
-| 5.2 | Implement headless render mode | ⬜ | `src/plottini/cli.py` | 1 hour |
-| 5.3 | User-friendly error display in UI | ⬜ | UI components | 1 hour |
-| 5.4 | Comprehensive unit tests | ⬜ | `tests/` | 3 hours |
-| 5.5 | Integration tests | ⬜ | `tests/` | 2 hours |
-| 5.6 | Update documentation | ⬜ | `README.md`, `CONTRIBUTING.md` | 1.5 hours |
+| #   | Task                              | Status | Files                          | Estimated Time |
+|-----|-----------------------------------|--------|--------------------------------|----------------|
+| 5.1 | Complete CLI integration          | ⬜      | `src/plottini/cli.py`          | 1 hour         |
+| 5.2 | Implement headless render mode    | ⬜      | `src/plottini/cli.py`          | 1 hour         |
+| 5.3 | User-friendly error display in UI | ⬜      | UI components                  | 1 hour         |
+| 5.4 | Comprehensive unit tests          | ⬜      | `tests/`                       | 3 hours        |
+| 5.5 | Integration tests                 | ⬜      | `tests/`                       | 2 hours        |
+| 5.6 | Update documentation              | ⬜      | `README.md`, `CONTRIBUTING.md` | 1.5 hours      |
 
 **Phase 5 Total**: ~9.5 hours
 
@@ -695,35 +695,24 @@ def test_invalid_expression_rejected():
 
 ## Progress Summary
 
-| Phase | Status | Progress | Total Time |
-|-------|--------|----------|------------|
-| Phase 0: Setup | ✅ Complete | 10/10 | - |
-| Phase 1: Core Foundation | ✅ Complete | 5/5 | 5.5 hours |
-| Phase 2a: First Charts | ✅ Complete | 6/6 | 7 hours |
-| Phase 2b: Extended Charts | ✅ Complete | 3/3 | 3 hours |
-| Phase 2c: Remaining Charts | ✅ Complete | 4/4 | 3 hours |
-| Phase 3: Advanced Features | ⬜ Not Started | 0/6 | 7 hours |
-| Phase 4: UI | ⬜ Not Started | 0/11 | 16 hours |
-| Phase 5: Polish | ⬜ Not Started | 0/6 | 9.5 hours |
-| **TOTAL** | **55% Complete** | **28/45** | **~51 hours** |
+| Phase                      | Status           | Progress  | Total Time    |
+|----------------------------|------------------|-----------|---------------|
+| Phase 0: Setup             | ✅ Complete       | 10/10     | -             |
+| Phase 1: Core Foundation   | ✅ Complete       | 5/5       | 5.5 hours     |
+| Phase 2a: First Charts     | ✅ Complete       | 6/6       | 7 hours       |
+| Phase 2b: Extended Charts  | ✅ Complete       | 3/3       | 3 hours       |
+| Phase 2c: Remaining Charts | ✅ Complete       | 4/4       | 3 hours       |
+| Phase 3: Advanced Features | ✅ Complete       | 6/6       | 7 hours       |
+| Phase 4: UI                | ⬜ Not Started    | 0/11      | 16 hours      |
+| Phase 5: Polish            | ⬜ Not Started    | 0/6       | 9.5 hours     |
+| **TOTAL**                  | **68% Complete** | **34/45** | **~51 hours** |
 
 ---
 
 ## Next Steps
 
-**Current Phase**: Phase 3 - Advanced Data Features
+**Current Phase**: Phase 4 - UI Implementation
 
-**Next Task**: Implement data filtering (Task 3.1)
-- File: `src/plottini/core/dataframe.py`
-- Duration: ~1 hour
-
-### Task Order for Phase 3
-
-Execute tasks in this order:
-
-1. **3.1**: Data filtering
-2. **3.2**: Multi-file alignment
-3. **3.3**: Secondary Y-axis
-4. **3.4**: Configuration schema
-5. **3.5**: TOML loader/saver
-6. **3.6**: Defaults
+**Next Task**: Create NiceGUI app shell (Task 4.1)
+- File: `src/plottini/ui/app.py`
+- Duration: ~1.5 hours

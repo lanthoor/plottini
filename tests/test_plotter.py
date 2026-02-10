@@ -116,6 +116,7 @@ class TestPlotConfig:
         assert config.title == ""
         assert config.x_label == ""
         assert config.y_label == ""
+        assert config.y2_label == ""
         assert config.figure_width == 10.0
         assert config.figure_height == 6.0
         assert config.show_grid is True
@@ -128,6 +129,7 @@ class TestPlotConfig:
             title="My Chart",
             x_label="X Axis",
             y_label="Y Axis",
+            y2_label="Secondary Y",
             figure_width=12.0,
             figure_height=8.0,
             show_grid=False,
@@ -137,6 +139,7 @@ class TestPlotConfig:
         assert config.title == "My Chart"
         assert config.x_label == "X Axis"
         assert config.y_label == "Y Axis"
+        assert config.y2_label == "Secondary Y"
         assert config.figure_width == 12.0
         assert config.figure_height == 8.0
         assert config.show_grid is False
@@ -980,3 +983,149 @@ class TestChartTypeEnumComplete:
         actual_types = [ct.value for ct in ChartType]
         for expected in expected_types:
             assert expected in actual_types, f"Missing chart type: {expected}"
+
+
+class TestSecondaryYAxis:
+    """Tests for secondary Y-axis support."""
+
+    @pytest.fixture
+    def dual_axis_df(self) -> DataFrame:
+        """Create DataFrame with data suitable for dual axis plotting."""
+        import numpy as np
+
+        from plottini.core.dataframe import Column
+
+        col_x = Column(
+            name="x",
+            index=0,
+            data=np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float64),
+        )
+        col_y1 = Column(
+            name="temperature",
+            index=1,
+            data=np.array([20.0, 22.0, 25.0, 23.0, 21.0], dtype=np.float64),
+        )
+        col_y2 = Column(
+            name="pressure",
+            index=2,
+            data=np.array([1000.0, 1005.0, 1010.0, 1008.0, 1003.0], dtype=np.float64),
+        )
+        return DataFrame(
+            columns={"x": col_x, "temperature": col_y1, "pressure": col_y2},
+            source_file=Path("dual_axis.tsv"),
+            row_count=5,
+        )
+
+    def test_line_chart_single_series_secondary_axis(self, dual_axis_df):
+        """Test line chart with single series on secondary axis."""
+        config = PlotConfig(chart_type=ChartType.LINE, y2_label="Pressure (hPa)")
+        plotter = Plotter(config)
+        series = [
+            SeriesConfig(x_column="x", y_column="pressure", use_secondary_y=True, label="Pressure")
+        ]
+        fig = plotter.create_figure(dual_axis_df, series)
+
+        # Should have two axes (primary and secondary)
+        assert len(fig.axes) == 2
+        ax2 = fig.axes[1]
+        assert ax2.get_ylabel() == "Pressure (hPa)"
+
+    def test_line_chart_mixed_series(self, dual_axis_df):
+        """Test line chart with mixed primary and secondary series."""
+        config = PlotConfig(
+            chart_type=ChartType.LINE,
+            y_label="Temperature (C)",
+            y2_label="Pressure (hPa)",
+        )
+        plotter = Plotter(config)
+        series = [
+            SeriesConfig(x_column="x", y_column="temperature", label="Temperature"),
+            SeriesConfig(x_column="x", y_column="pressure", use_secondary_y=True, label="Pressure"),
+        ]
+        fig = plotter.create_figure(dual_axis_df, series)
+
+        # Should have two axes
+        assert len(fig.axes) == 2
+        ax = fig.axes[0]
+        ax2 = fig.axes[1]
+
+        # Check labels
+        assert ax.get_ylabel() == "Temperature (C)"
+        assert ax2.get_ylabel() == "Pressure (hPa)"
+
+    def test_line_chart_no_secondary_axis_when_not_needed(self, dual_axis_df):
+        """Test line chart doesn't create secondary axis when not needed."""
+        config = PlotConfig(chart_type=ChartType.LINE)
+        plotter = Plotter(config)
+        series = [SeriesConfig(x_column="x", y_column="temperature", label="Temperature")]
+        fig = plotter.create_figure(dual_axis_df, series)
+
+        # Should have only one axis
+        assert len(fig.axes) == 1
+
+    def test_scatter_chart_secondary_axis(self, dual_axis_df):
+        """Test scatter chart supports secondary axis."""
+        config = PlotConfig(chart_type=ChartType.SCATTER, y2_label="Pressure")
+        plotter = Plotter(config)
+        series = [
+            SeriesConfig(x_column="x", y_column="temperature", label="Temperature"),
+            SeriesConfig(x_column="x", y_column="pressure", use_secondary_y=True, label="Pressure"),
+        ]
+        fig = plotter.create_figure(dual_axis_df, series)
+
+        # Should have two axes
+        assert len(fig.axes) == 2
+        assert fig.axes[1].get_ylabel() == "Pressure"
+
+    def test_area_chart_secondary_axis(self, dual_axis_df):
+        """Test area chart supports secondary axis."""
+        config = PlotConfig(chart_type=ChartType.AREA, y2_label="Pressure")
+        plotter = Plotter(config)
+        series = [
+            SeriesConfig(x_column="x", y_column="temperature", label="Temperature"),
+            SeriesConfig(x_column="x", y_column="pressure", use_secondary_y=True, label="Pressure"),
+        ]
+        fig = plotter.create_figure(dual_axis_df, series)
+
+        # Should have two axes
+        assert len(fig.axes) == 2
+
+    def test_step_chart_secondary_axis(self, dual_axis_df):
+        """Test step chart supports secondary axis."""
+        config = PlotConfig(chart_type=ChartType.STEP, y2_label="Pressure")
+        plotter = Plotter(config)
+        series = [
+            SeriesConfig(x_column="x", y_column="temperature", label="Temperature"),
+            SeriesConfig(x_column="x", y_column="pressure", use_secondary_y=True, label="Pressure"),
+        ]
+        fig = plotter.create_figure(dual_axis_df, series)
+
+        # Should have two axes
+        assert len(fig.axes) == 2
+
+    def test_bar_chart_ignores_secondary_axis(self, bar_df):
+        """Test bar chart ignores secondary axis setting."""
+        config = PlotConfig(chart_type=ChartType.BAR)
+        plotter = Plotter(config)
+        series = [SeriesConfig(x_column="Index", y_column="Sales", use_secondary_y=True)]
+        fig = plotter.create_figure(bar_df, series)
+
+        # Should still have only one axis (secondary not supported for bar)
+        assert len(fig.axes) == 1
+
+    def test_secondary_axis_legend_merged(self, dual_axis_df):
+        """Test legend includes series from both axes."""
+        config = PlotConfig(chart_type=ChartType.LINE, show_legend=True)
+        plotter = Plotter(config)
+        series = [
+            SeriesConfig(x_column="x", y_column="temperature", label="Temperature"),
+            SeriesConfig(x_column="x", y_column="pressure", use_secondary_y=True, label="Pressure"),
+        ]
+        fig = plotter.create_figure(dual_axis_df, series)
+
+        ax = fig.axes[0]
+        legend = ax.get_legend()
+        assert legend is not None
+        legend_texts = [t.get_text() for t in legend.get_texts()]
+        assert "Temperature" in legend_texts
+        assert "Pressure" in legend_texts

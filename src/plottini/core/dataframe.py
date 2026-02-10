@@ -167,11 +167,34 @@ class DataFrame:
             New DataFrame with filtered rows.
 
         Raises:
-            NotImplementedError: This feature is not yet implemented.
+            KeyError: If column doesn't exist.
         """
-        raise NotImplementedError(
-            "Row filtering is not yet implemented. "
-            "This feature will be available in a future release."
+        # Get column data (raises KeyError if column doesn't exist)
+        col_data = self[column]
+
+        # Build boolean mask
+        mask = np.ones(len(col_data), dtype=bool)
+        if min_val is not None:
+            mask &= col_data >= min_val
+        if max_val is not None:
+            mask &= col_data <= max_val
+
+        # Create new filtered columns
+        new_columns = {
+            name: Column(
+                name=col.name,
+                index=col.index,
+                data=col.data[mask],
+                is_derived=col.is_derived,
+            )
+            for name, col in self.columns.items()
+        }
+
+        return DataFrame(
+            columns=new_columns,
+            source_file=self.source_file,
+            row_count=int(np.sum(mask)),
+            _column_order=self._column_order.copy(),
         )
 
 
@@ -192,4 +215,78 @@ def create_empty_dataframe(source_file: Path) -> DataFrame:
     )
 
 
-__all__ = ["Column", "DataFrame", "create_empty_dataframe"]
+@dataclass
+class AlignedDataFrames:
+    """Result of aligning multiple DataFrames on a common column.
+
+    Each DataFrame retains its original data; the alignment provides
+    metadata for consistent plotting across the union of x-values.
+
+    Attributes:
+        dataframes: Original DataFrames (unmodified)
+        align_column: Name of the alignment column
+        x_min: Minimum x value across all files
+        x_max: Maximum x value across all files
+    """
+
+    dataframes: list[DataFrame]
+    align_column: str
+    x_min: float
+    x_max: float
+
+
+def align_dataframes(
+    dataframes: list[DataFrame],
+    align_column: str,
+) -> AlignedDataFrames:
+    """Align multiple DataFrames by a common column.
+
+    Validates that all DataFrames have the alignment column and
+    computes the union range for consistent plotting. Each DataFrame
+    retains its original data - this function does not interpolate
+    or modify the data. The x-axis will display the union of all
+    x-values when plotting.
+
+    Args:
+        dataframes: List of DataFrames to align
+        align_column: Column name to align on (must exist in all DataFrames)
+
+    Returns:
+        AlignedDataFrames containing the original DataFrames and
+        computed x-axis range metadata.
+
+    Raises:
+        ValueError: If dataframes list is empty
+        KeyError: If align_column doesn't exist in any DataFrame
+    """
+    if not dataframes:
+        raise ValueError("dataframes list cannot be empty")
+
+    # Validate all DataFrames have the alignment column
+    for i, df in enumerate(dataframes):
+        if align_column not in df:
+            available = ", ".join(f"'{n}'" for n in df.get_column_names())
+            raise KeyError(
+                f"Column '{align_column}' not found in DataFrame {i} "
+                f"(source: {df.source_file}). Available columns: {available}"
+            )
+
+    # Extract alignment-column values and ensure there is data to align
+    align_values_per_df = [df[align_column] for df in dataframes]
+    if any(values.size == 0 for values in align_values_per_df):
+        raise ValueError("Cannot align empty DataFrames")
+
+    # Compute union range (min and max across all DataFrames)
+    all_values = np.concatenate(align_values_per_df)
+    x_min = float(np.min(all_values))
+    x_max = float(np.max(all_values))
+
+    return AlignedDataFrames(
+        dataframes=dataframes,
+        align_column=align_column,
+        x_min=x_min,
+        x_max=x_max,
+    )
+
+
+__all__ = ["Column", "DataFrame", "create_empty_dataframe", "AlignedDataFrames", "align_dataframes"]
