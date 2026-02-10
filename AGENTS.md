@@ -146,8 +146,13 @@ git checkout -b fix/short-description
 
 ### 2. Update Version Number
 
-Edit `src/plottini/__init__.py`:
+Update version in the following files:
+- `src/plottini/__init__.py` - Main version string
+- `pyproject.toml` - Package version
+- `tests/test_basic.py` - Version assertion test
+- `tests/test_cli.py` - CLI version output test
 
+Version guidelines:
 - **Minor version** (0.X.0): New features, new modules, significant additions
 - **Patch version** (0.0.X): Bug fixes, small improvements, documentation
 
