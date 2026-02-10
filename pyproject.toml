@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "plottini"
-version = "0.3.2"
+version = "0.4.0"
 description = "A user-friendly graph builder with matplotlib backend for creating publication-quality plots from TSV data"
 readme = "README.md"
 license = {text = "MIT"}
@@ -95,6 +95,14 @@ disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = "nicegui.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tomli"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tomli_w"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

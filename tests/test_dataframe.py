@@ -111,12 +111,97 @@ class TestDataFrame:
         """Test is_empty returns False for non-empty DataFrame."""
         assert sample_dataframe.is_empty() is False
 
-    def test_filter_rows_not_implemented(self, sample_dataframe: DataFrame) -> None:
-        """Test that filter_rows raises NotImplementedError."""
-        with pytest.raises(NotImplementedError) as exc_info:
-            sample_dataframe.filter_rows("Energy_eV", min_val=-5.0, max_val=-4.0)
+    def test_filter_rows_with_min_only(self, sample_dataframe: DataFrame) -> None:
+        """Test filtering with only minimum value."""
+        filtered = sample_dataframe.filter_rows("Energy_eV", min_val=-4.5)
 
-        assert "not yet implemented" in str(exc_info.value)
+        assert len(filtered) == 2
+        np.testing.assert_array_equal(filtered["Energy_eV"], [-4.5, -4.0])
+        np.testing.assert_array_equal(filtered["k_point"], [0.1, 0.2])
+
+    def test_filter_rows_with_max_only(self, sample_dataframe: DataFrame) -> None:
+        """Test filtering with only maximum value."""
+        filtered = sample_dataframe.filter_rows("Energy_eV", max_val=-4.5)
+
+        assert len(filtered) == 2
+        np.testing.assert_array_equal(filtered["Energy_eV"], [-5.0, -4.5])
+
+    def test_filter_rows_with_both_bounds(self, sample_dataframe: DataFrame) -> None:
+        """Test filtering with both min and max values."""
+        filtered = sample_dataframe.filter_rows("Energy_eV", min_val=-4.8, max_val=-4.2)
+
+        assert len(filtered) == 1
+        np.testing.assert_array_equal(filtered["Energy_eV"], [-4.5])
+
+    def test_filter_rows_empty_result(self, sample_dataframe: DataFrame) -> None:
+        """Test filtering that returns empty DataFrame."""
+        filtered = sample_dataframe.filter_rows("Energy_eV", min_val=0.0)
+
+        assert len(filtered) == 0
+        assert filtered.is_empty()
+        # Columns should still exist
+        assert "Energy_eV" in filtered
+        assert "k_point" in filtered
+
+    def test_filter_rows_invalid_column_raises_keyerror(self, sample_dataframe: DataFrame) -> None:
+        """Test that filtering on invalid column raises KeyError."""
+        with pytest.raises(KeyError) as exc_info:
+            sample_dataframe.filter_rows("nonexistent", min_val=0.0)
+
+        assert "nonexistent" in str(exc_info.value)
+
+    def test_filter_rows_preserves_column_order(self, sample_dataframe: DataFrame) -> None:
+        """Test that filtering preserves column order."""
+        filtered = sample_dataframe.filter_rows("Energy_eV", min_val=-5.0)
+
+        assert filtered.get_column_names() == sample_dataframe.get_column_names()
+
+    def test_filter_rows_preserves_source_file(self, sample_dataframe: DataFrame) -> None:
+        """Test that filtering preserves source file path."""
+        filtered = sample_dataframe.filter_rows("Energy_eV", min_val=-5.0)
+
+        assert filtered.source_file == sample_dataframe.source_file
+
+
+class TestFilterRowsWithDerivedColumns:
+    """Tests for filter_rows with derived columns."""
+
+    @pytest.fixture
+    def dataframe_with_derived(self) -> DataFrame:
+        """Create a DataFrame with a derived column."""
+        col1 = Column(
+            name="x",
+            index=0,
+            data=np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float64),
+        )
+        col2 = Column(
+            name="y",
+            index=1,
+            data=np.array([10.0, 20.0, 30.0, 40.0, 50.0], dtype=np.float64),
+        )
+        df = DataFrame(
+            columns={"x": col1, "y": col2},
+            source_file=Path("test.tsv"),
+            row_count=5,
+        )
+        # Add a derived column
+        df.add_derived_column("ratio", "y / x")
+        return df
+
+    def test_filter_preserves_derived_columns(self, dataframe_with_derived: DataFrame) -> None:
+        """Test that filtering preserves derived columns."""
+        filtered = dataframe_with_derived.filter_rows("x", min_val=2.0, max_val=4.0)
+
+        assert "ratio" in filtered
+        assert filtered.get_column("ratio").is_derived is True
+        np.testing.assert_array_almost_equal(filtered["ratio"], [10.0, 10.0, 10.0])
+
+    def test_filter_on_derived_column(self, dataframe_with_derived: DataFrame) -> None:
+        """Test filtering on a derived column."""
+        # All rows have ratio=10.0, so this should return all rows
+        filtered = dataframe_with_derived.filter_rows("ratio", min_val=9.0, max_val=11.0)
+
+        assert len(filtered) == 5
 
 
 class TestAddDerivedColumn:
@@ -251,3 +336,177 @@ class TestDataFrameColumnOrder:
         )
 
         assert df.get_column_names() == ["Y", "X"]
+
+
+class TestAlignDataFrames:
+    """Tests for multi-file alignment functionality."""
+
+    @pytest.fixture
+    def df1(self) -> DataFrame:
+        """Create first DataFrame for alignment testing."""
+        col_time = Column(
+            name="time",
+            index=0,
+            data=np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64),
+        )
+        col_value = Column(
+            name="value",
+            index=1,
+            data=np.array([10.0, 20.0, 30.0, 40.0], dtype=np.float64),
+        )
+        return DataFrame(
+            columns={"time": col_time, "value": col_value},
+            source_file=Path("data1.tsv"),
+            row_count=4,
+        )
+
+    @pytest.fixture
+    def df2(self) -> DataFrame:
+        """Create second DataFrame for alignment testing."""
+        col_time = Column(
+            name="time",
+            index=0,
+            data=np.array([2.0, 3.0, 4.0, 5.0], dtype=np.float64),
+        )
+        col_value = Column(
+            name="value",
+            index=1,
+            data=np.array([100.0, 200.0, 300.0, 400.0], dtype=np.float64),
+        )
+        return DataFrame(
+            columns={"time": col_time, "value": col_value},
+            source_file=Path("data2.tsv"),
+            row_count=4,
+        )
+
+    def test_align_dataframes_basic(self, df1: DataFrame, df2: DataFrame) -> None:
+        """Test basic alignment of two DataFrames."""
+        from plottini.core.dataframe import AlignedDataFrames, align_dataframes
+
+        result = align_dataframes([df1, df2], "time")
+
+        assert isinstance(result, AlignedDataFrames)
+        assert len(result.dataframes) == 2
+        assert result.align_column == "time"
+        # x_min should be min across both (0.0 from df1)
+        assert result.x_min == 0.0
+        # x_max should be max across both (5.0 from df2)
+        assert result.x_max == 5.0
+
+    def test_align_dataframes_preserves_original_data(self, df1: DataFrame, df2: DataFrame) -> None:
+        """Test that alignment does not modify original DataFrames."""
+        from plottini.core.dataframe import align_dataframes
+
+        result = align_dataframes([df1, df2], "time")
+
+        # Original data should be unchanged
+        np.testing.assert_array_equal(result.dataframes[0]["time"], [0.0, 1.0, 2.0, 3.0])
+        np.testing.assert_array_equal(result.dataframes[1]["time"], [2.0, 3.0, 4.0, 5.0])
+
+    def test_align_dataframes_single_dataframe(self, df1: DataFrame) -> None:
+        """Test alignment with single DataFrame."""
+        from plottini.core.dataframe import align_dataframes
+
+        result = align_dataframes([df1], "time")
+
+        assert len(result.dataframes) == 1
+        assert result.x_min == 0.0
+        assert result.x_max == 3.0
+
+    def test_align_dataframes_empty_list_raises_error(self) -> None:
+        """Test that empty list raises ValueError."""
+        from plottini.core.dataframe import align_dataframes
+
+        with pytest.raises(ValueError) as exc_info:
+            align_dataframes([], "time")
+
+        assert "cannot be empty" in str(exc_info.value)
+
+    def test_align_dataframes_missing_column_raises_error(self, df1: DataFrame) -> None:
+        """Test that missing alignment column raises KeyError."""
+        from plottini.core.dataframe import align_dataframes
+
+        # Create df without 'time' column
+        col_x = Column(
+            name="x",
+            index=0,
+            data=np.array([1.0, 2.0], dtype=np.float64),
+        )
+        df_no_time = DataFrame(
+            columns={"x": col_x},
+            source_file=Path("no_time.tsv"),
+            row_count=2,
+        )
+
+        with pytest.raises(KeyError) as exc_info:
+            align_dataframes([df1, df_no_time], "time")
+
+        assert "time" in str(exc_info.value)
+        assert "DataFrame 1" in str(exc_info.value)
+
+    def test_align_dataframes_different_row_counts(self) -> None:
+        """Test alignment with DataFrames of different row counts."""
+        from plottini.core.dataframe import align_dataframes
+
+        # Create DataFrames with different sizes
+        col1 = Column(
+            name="x",
+            index=0,
+            data=np.array([1.0, 2.0, 3.0], dtype=np.float64),
+        )
+        df_small = DataFrame(
+            columns={"x": col1},
+            source_file=Path("small.tsv"),
+            row_count=3,
+        )
+
+        col2 = Column(
+            name="x",
+            index=0,
+            data=np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float64),
+        )
+        df_large = DataFrame(
+            columns={"x": col2},
+            source_file=Path("large.tsv"),
+            row_count=6,
+        )
+
+        result = align_dataframes([df_small, df_large], "x")
+
+        assert result.x_min == 0.0
+        assert result.x_max == 5.0
+        # Original DataFrames unchanged
+        assert len(result.dataframes[0]) == 3
+        assert len(result.dataframes[1]) == 6
+
+    def test_align_dataframes_non_overlapping_ranges(self) -> None:
+        """Test alignment with non-overlapping value ranges."""
+        from plottini.core.dataframe import align_dataframes
+
+        col1 = Column(
+            name="x",
+            index=0,
+            data=np.array([0.0, 1.0, 2.0], dtype=np.float64),
+        )
+        df1 = DataFrame(
+            columns={"x": col1},
+            source_file=Path("low.tsv"),
+            row_count=3,
+        )
+
+        col2 = Column(
+            name="x",
+            index=0,
+            data=np.array([10.0, 11.0, 12.0], dtype=np.float64),
+        )
+        df2 = DataFrame(
+            columns={"x": col2},
+            source_file=Path("high.tsv"),
+            row_count=3,
+        )
+
+        result = align_dataframes([df1, df2], "x")
+
+        # Should span the full union range
+        assert result.x_min == 0.0
+        assert result.x_max == 12.0

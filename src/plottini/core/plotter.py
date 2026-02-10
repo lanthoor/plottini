@@ -100,6 +100,7 @@ class PlotConfig:
         title: Plot title
         x_label: Label for x-axis
         y_label: Label for y-axis
+        y2_label: Label for secondary y-axis
         figure_width: Figure width in inches
         figure_height: Figure height in inches
         show_grid: Whether to show grid lines
@@ -110,6 +111,7 @@ class PlotConfig:
     title: str = ""
     x_label: str = ""
     y_label: str = ""
+    y2_label: str = ""
     figure_width: float = 10.0
     figure_height: float = 6.0
     show_grid: bool = True
@@ -165,15 +167,23 @@ class Plotter:
         else:
             fig, ax = plt.subplots(figsize=(self.config.figure_width, self.config.figure_height))
 
+        # Check if secondary y-axis is needed (only for supported chart types)
+        ax2: Axes | None = None
+        supported_secondary = {ChartType.LINE, ChartType.SCATTER, ChartType.AREA, ChartType.STEP}
+        if self.config.chart_type in supported_secondary:
+            needs_secondary = any(s.use_secondary_y for s in series)
+            if needs_secondary:
+                ax2 = ax.twinx()
+
         # Plot based on chart type
         if self.config.chart_type == ChartType.LINE:
-            self._plot_line(ax, data, series)
+            self._plot_line(ax, data, series, ax2)
         elif self.config.chart_type == ChartType.BAR:
             self._plot_bar(ax, data, series)
         elif self.config.chart_type == ChartType.PIE:
             self._plot_pie(ax, data, series)
         elif self.config.chart_type == ChartType.SCATTER:
-            self._plot_scatter(ax, data, series)
+            self._plot_scatter(ax, data, series, ax2)
         elif self.config.chart_type == ChartType.HISTOGRAM:
             self._plot_histogram(ax, data, series)
         elif self.config.chart_type == ChartType.POLAR:
@@ -183,18 +193,18 @@ class Plotter:
         elif self.config.chart_type == ChartType.VIOLIN:
             self._plot_violin(ax, data, series)
         elif self.config.chart_type == ChartType.AREA:
-            self._plot_area(ax, data, series)
+            self._plot_area(ax, data, series, ax2)
         elif self.config.chart_type == ChartType.STEM:
             self._plot_stem(ax, data, series)
         elif self.config.chart_type == ChartType.STEP:
-            self._plot_step(ax, data, series)
+            self._plot_step(ax, data, series, ax2)
         elif self.config.chart_type == ChartType.ERRORBAR:
             self._plot_errorbar(ax, data, series)
         elif self.config.chart_type == ChartType.BAR_HORIZONTAL:
             self._plot_bar_horizontal(ax, data, series)
 
         # Apply common configuration
-        self._apply_config(ax)
+        self._apply_config(ax, ax2)
 
         return fig
 
@@ -203,6 +213,7 @@ class Plotter:
         ax: Axes,
         data: list[DataFrame],
         series: list[SeriesConfig],
+        ax2: Axes | None = None,
     ) -> None:
         """Plot line chart."""
         for idx, s in enumerate(series):
@@ -215,7 +226,10 @@ class Plotter:
             # Determine color
             color = s.color if s.color else COLORBLIND_PALETTE[idx % len(COLORBLIND_PALETTE)]
 
-            ax.plot(
+            # Select target axis
+            target_ax = ax2 if s.use_secondary_y and ax2 else ax
+
+            target_ax.plot(
                 x_data,
                 y_data,
                 label=s.label,
@@ -324,6 +338,7 @@ class Plotter:
         ax: Axes,
         data: list[DataFrame],
         series: list[SeriesConfig],
+        ax2: Axes | None = None,
     ) -> None:
         """Plot scatter chart for correlation analysis."""
         for idx, s in enumerate(series):
@@ -339,7 +354,10 @@ class Plotter:
             # Determine marker (default to 'o' for scatter)
             marker = s.marker if s.marker else "o"
 
-            ax.scatter(
+            # Select target axis
+            target_ax = ax2 if s.use_secondary_y and ax2 else ax
+
+            target_ax.scatter(
                 x_data,
                 y_data,
                 label=s.label,
@@ -483,6 +501,7 @@ class Plotter:
         ax: Axes,
         data: list[DataFrame],
         series: list[SeriesConfig],
+        ax2: Axes | None = None,
     ) -> None:
         """Plot filled area chart."""
         for idx, s in enumerate(series):
@@ -495,7 +514,10 @@ class Plotter:
             # Determine color
             color = s.color if s.color else COLORBLIND_PALETTE[idx % len(COLORBLIND_PALETTE)]
 
-            ax.fill_between(
+            # Select target axis
+            target_ax = ax2 if s.use_secondary_y and ax2 else ax
+
+            target_ax.fill_between(
                 x_data,
                 y_data,
                 label=s.label,
@@ -503,7 +525,7 @@ class Plotter:
                 alpha=0.5,
             )
             # Also plot the line on top
-            ax.plot(x_data, y_data, color=color, linewidth=s.line_width)
+            target_ax.plot(x_data, y_data, color=color, linewidth=s.line_width)
 
     def _plot_stem(
         self,
@@ -537,6 +559,7 @@ class Plotter:
         ax: Axes,
         data: list[DataFrame],
         series: list[SeriesConfig],
+        ax2: Axes | None = None,
     ) -> None:
         """Plot step chart for discrete changes."""
         for idx, s in enumerate(series):
@@ -549,7 +572,10 @@ class Plotter:
             # Determine color
             color = s.color if s.color else COLORBLIND_PALETTE[idx % len(COLORBLIND_PALETTE)]
 
-            ax.step(
+            # Select target axis
+            target_ax = ax2 if s.use_secondary_y and ax2 else ax
+
+            target_ax.step(
                 x_data,
                 y_data,
                 label=s.label,
@@ -643,7 +669,7 @@ class Plotter:
         ax.set_yticks(y_positions)
         ax.set_yticklabels(y_labels_str)
 
-    def _apply_config(self, ax: Axes) -> None:
+    def _apply_config(self, ax: Axes, ax2: Axes | None = None) -> None:
         """Apply common configuration to axes."""
         # Title and labels
         if self.config.title:
@@ -653,12 +679,23 @@ class Plotter:
         if self.config.y_label:
             ax.set_ylabel(self.config.y_label)
 
+        # Secondary y-axis label
+        if ax2 and self.config.y2_label:
+            ax2.set_ylabel(self.config.y2_label)
+
         # Grid
         ax.grid(self.config.show_grid)
 
-        # Legend
-        if self.config.show_legend and ax.get_legend_handles_labels()[1]:
-            ax.legend()
+        # Legend - merge legends from both axes if secondary axis exists
+        if self.config.show_legend:
+            if ax2:
+                # Get handles and labels from both axes
+                lines1, labels1 = ax.get_legend_handles_labels()
+                lines2, labels2 = ax2.get_legend_handles_labels()
+                if labels1 or labels2:
+                    ax.legend(lines1 + lines2, labels1 + labels2)
+            elif ax.get_legend_handles_labels()[1]:
+                ax.legend()
 
 
 __all__ = [
