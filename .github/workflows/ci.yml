@@ -20,27 +20,22 @@ jobs:
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+    - name: Install uv
+      uses: astral-sh/setup-uv@f94ec6bedd8674c4426838e6b50417d36b6ab231  # v5.3.1
       with:
-        python-version: ${{ matrix.python-version }}
+        enable-cache: true
     
     - name: Install dependencies
-      run: |
-        pip install --upgrade pip
-        pip install -e ".[dev]"
+      run: uv sync --extra dev --python ${{ matrix.python-version }}
     
     - name: Run linting with ruff
-      run: |
-        ruff check src/ tests/
+      run: uv run ruff check src/ tests/
     
     - name: Run type checking with mypy
-      run: |
-        mypy src/plottini
+      run: uv run mypy src/plottini
     
     - name: Run tests with pytest
-      run: |
-        pytest --cov=plottini --cov-report=xml --cov-report=term
+      run: uv run pytest --cov=plottini --cov-report=xml --cov-report=term
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@0561704f0f02c16a585d4c7555e57fa2e44cf909  # v5.5.2
@@ -57,18 +52,16 @@ jobs:
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     
-    - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+    - name: Install uv
+      uses: astral-sh/setup-uv@f94ec6bedd8674c4426838e6b50417d36b6ab231  # v5.3.1
       with:
-        python-version: '3.10'
+        enable-cache: true
     
-    - name: Install build dependencies
-      run: pip install build hatchling
+    - name: Install dependencies
+      run: uv sync --extra dev --python 3.10
     
     - name: Build package
-      run: python -m build
+      run: uv build
     
     - name: Check package metadata
-      run: |
-        pip install twine
-        twine check dist/*
+      run: uv run twine check dist/*

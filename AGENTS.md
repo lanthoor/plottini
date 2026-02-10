@@ -146,8 +146,13 @@ git checkout -b fix/short-description
 
 ### 2. Update Version Number
 
-Edit `src/plottini/__init__.py`:
+Update version in the following files:
+- `src/plottini/__init__.py` - Main version string
+- `pyproject.toml` - Package version
+- `tests/test_basic.py` - Version assertion test
+- `tests/test_cli.py` - CLI version output test
 
+Version guidelines:
 - **Minor version** (0.X.0): New features, new modules, significant additions
 - **Patch version** (0.0.X): Bug fixes, small improvements, documentation
 
@@ -453,28 +458,28 @@ def validate_expression(expr: str) -> bool:
 
 ```bash
 # Install dependencies
-uv pip install -e ".[dev]"
+uv sync --extra dev
 
 # Run tests
-pytest -v
-pytest --cov=plottini --cov-report=html
+uv run pytest -v
+uv run pytest --cov=plottini --cov-report=html
 
 # Check code quality
-ruff check src/ tests/
-mypy src/plottini
+uv run ruff check src/ tests/
+uv run mypy src/plottini
 
 # Format code
-ruff format src/ tests/
+uv run ruff format src/ tests/
 
 # Run CLI
-plottini --help
-plottini version
+uv run plottini --help
+uv run plottini version
 
 # Build package
-python -m build
+uv build
 
 # Check package
-twine check dist/*
+uv run twine check dist/*
 ```
 
 ---

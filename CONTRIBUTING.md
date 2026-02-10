@@ -23,6 +23,7 @@ Thank you for your interest in contributing to Plottini! This document provides 
 
 - Python 3.10 or higher
 - Git
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
 - A GitHub account
 
 ### Getting Started
@@ -35,38 +36,26 @@ git clone https://github.com/YOUR_USERNAME/plottini.git
 cd plottini
 ```
 
-2. **Set Up Virtual Environment**
+2. **Install Dependencies**
 
 ```bash
-# Create virtual environment
+# Using uv (recommended - faster and more reliable)
+uv sync --extra dev
+
+# Or using pip with virtual environment
 python -m venv venv
-
-# Activate it
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Or use uv for faster installation
-uv venv
-source .venv/bin/activate
-```
-
-3. **Install Dependencies**
-
-```bash
-# Install in development mode with all dev dependencies
 pip install -e ".[dev]"
-
-# Or with uv
-uv pip install -e ".[dev]"
 ```
 
-4. **Verify Installation**
+3. **Verify Installation**
 
 ```bash
 # Run tests to ensure everything works
-pytest
+uv run pytest
 
 # Check that the CLI works
-plottini --version
+uv run plottini --version
 ```
 
 ---
@@ -90,14 +79,14 @@ git checkout -b feature/your-feature-name
 3. **Test your changes**
 ```bash
 # Run tests
-pytest
+uv run pytest
 
 # Run with coverage
-pytest --cov=plottini --cov-report=term
+uv run pytest --cov=plottini --cov-report=term
 
 # Check code quality
-ruff check src/ tests/
-mypy src/plottini
+uv run ruff check src/ tests/
+uv run mypy src/plottini
 ```
 
 4. **Commit and push**
@@ -124,23 +113,23 @@ We use several tools to maintain code quality:
 
 ```bash
 # Check for issues
-ruff check src/ tests/
+uv run ruff check src/ tests/
 
 # Auto-fix issues
-ruff check --fix src/ tests/
+uv run ruff check --fix src/ tests/
 
 # Format code
-ruff format src/ tests/
+uv run ruff format src/ tests/
 ```
 
 ### Type Checking with Mypy
 
 ```bash
 # Check types
-mypy src/plottini
+uv run mypy src/plottini
 
 # Check specific file
-mypy src/plottini/core/parser.py
+uv run mypy src/plottini/core/parser.py
 ```
 
 ### Configuration
@@ -158,19 +147,19 @@ All tool configurations are in `pyproject.toml`:
 
 ```bash
 # Run all tests
-pytest
+uv run pytest
 
 # Run with verbose output
-pytest -v
+uv run pytest -v
 
 # Run specific test file
-pytest tests/test_parser.py
+uv run pytest tests/test_parser.py
 
 # Run specific test function
-pytest tests/test_parser.py::test_parse_simple_tsv
+uv run pytest tests/test_parser.py::test_parse_simple_tsv
 
 # Run with coverage
-pytest --cov=plottini --cov-report=html
+uv run pytest --cov=plottini --cov-report=html
 # Open htmlcov/index.html to view coverage report
 ```
 

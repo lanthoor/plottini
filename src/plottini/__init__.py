@@ -5,7 +5,7 @@ Plottini allows non-technical users to create publication-quality graphs
 from TSV data files with an intuitive UI and powerful configuration options.
 """
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 __author__ = "Lallu Anthoor"
 __email__ = "dev@spendly.co.in"
 __license__ = "MIT"
