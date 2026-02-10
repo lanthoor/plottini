@@ -106,7 +106,7 @@ class TSVParser:
         else:
             # Determine column count from first data line
             first_line, _ = data_lines[0]
-            num_cols = len(first_line.split(self.config.delimiter))
+            num_cols = len(self._split_line(first_line))
             column_names = [f"Column {i + 1}" for i in range(num_cols)]
 
         if not data_lines:
@@ -122,7 +122,7 @@ class TSVParser:
         data_arrays: list[list[float]] = [[] for _ in range(num_cols)]
 
         for line, line_num in data_lines:
-            values = line.split(self.config.delimiter)
+            values = self._split_line(line)
             values = [v.strip() for v in values]
 
             # Validate column count
@@ -181,6 +181,195 @@ class TSVParser:
         """
         return [self.parse(path) for path in file_paths]
 
+    def parse_blocks(self, file_path: Path | str) -> list[DataFrame]:
+        """Parse a TSV file that may contain multiple data blocks.
+
+        Data blocks are separated by comment lines or empty lines.
+        Each block becomes a separate DataFrame.
+
+        Args:
+            file_path: Path to the TSV file.
+
+        Returns:
+            List of DataFrames, one per data block.
+
+        Raises:
+            FileNotFoundError: If file does not exist.
+            ParseError: If file contains invalid data.
+        """
+        path = Path(file_path)
+
+        if not path.exists():
+            raise FileNotFoundError(f"File not found: {path}")
+
+        lines = self._read_lines(path)
+        blocks = self._split_into_blocks(lines)
+
+        if not blocks:
+            warnings.warn(
+                f"File '{path}' is empty or contains only comments",
+                stacklevel=2,
+            )
+            return [create_empty_dataframe(path)]
+
+        dataframes: list[DataFrame] = []
+        for block_idx, block_lines in enumerate(blocks):
+            df = self._parse_block(path, block_lines, block_idx)
+            if df.row_count > 0:
+                dataframes.append(df)
+
+        if not dataframes:
+            warnings.warn(
+                f"File '{path}' contains no valid data blocks",
+                stacklevel=2,
+            )
+            return [create_empty_dataframe(path)]
+
+        return dataframes
+
+    def _split_into_blocks(self, lines: list[str]) -> list[list[tuple[str, int]]]:
+        """Split lines into separate data blocks.
+
+        Blocks are separated by comment lines or empty lines.
+
+        Args:
+            lines: All lines from the file.
+
+        Returns:
+            List of blocks, where each block is a list of (line, line_number) tuples.
+        """
+        blocks: list[list[tuple[str, int]]] = []
+        current_block: list[tuple[str, int]] = []
+
+        for line_num, line in enumerate(lines, start=1):
+            stripped = line.strip()
+
+            # Empty line or comment line marks end of current block
+            if not stripped or any(stripped.startswith(char) for char in self.config.comment_chars):
+                if current_block:
+                    blocks.append(current_block)
+                    current_block = []
+                continue
+
+            current_block.append((stripped, line_num))
+
+        # Don't forget the last block
+        if current_block:
+            blocks.append(current_block)
+
+        return blocks
+
+    def _parse_block(
+        self, path: Path, data_lines: list[tuple[str, int]], block_idx: int
+    ) -> DataFrame:
+        """Parse a single data block into a DataFrame.
+
+        Args:
+            path: Source file path (for error messages and DataFrame metadata).
+            data_lines: Lines in this block as (content, line_number) tuples.
+            block_idx: Index of this block (0-based), used for naming.
+
+        Returns:
+            DataFrame containing the parsed data.
+        """
+        if not data_lines:
+            return create_empty_dataframe(path)
+
+        # Extract headers or generate column names
+        if self.config.has_header:
+            header_line, header_line_num = data_lines[0]
+            column_names = self._parse_header(header_line)
+            # Validate unique column names
+            seen: set[str] = set()
+            for col_idx, name in enumerate(column_names, start=1):
+                if name in seen:
+                    raise ParseError(
+                        file_path=path,
+                        line_number=header_line_num,
+                        column=col_idx,
+                        message=f"Duplicate column name '{name}' in header",
+                        raw_value=name,
+                        context_line=header_line,
+                    )
+                seen.add(name)
+            data_lines = data_lines[1:]
+        else:
+            # Determine column count from first data line
+            first_line, _ = data_lines[0]
+            num_cols = len(self._split_line(first_line))
+            column_names = [f"Column {i + 1}" for i in range(num_cols)]
+
+        if not data_lines:
+            return create_empty_dataframe(path)
+
+        # Parse data rows
+        num_cols = len(column_names)
+        data_arrays: list[list[float]] = [[] for _ in range(num_cols)]
+
+        for line, line_num in data_lines:
+            values = self._split_line(line)
+            values = [v.strip() for v in values]
+
+            # Validate column count
+            if len(values) != num_cols:
+                raise ParseError(
+                    file_path=path,
+                    line_number=line_num,
+                    message=f"Inconsistent column count: expected {num_cols}, got {len(values)}",
+                    context_line=line,
+                )
+
+            # Parse each value
+            for col_idx, value in enumerate(values):
+                try:
+                    numeric_value = float(value)
+                except ValueError:
+                    raise ParseError(
+                        file_path=path,
+                        line_number=line_num,
+                        column=col_idx + 1,
+                        message="Invalid numeric value",
+                        raw_value=value,
+                        context_line=line,
+                    ) from None
+
+                data_arrays[col_idx].append(numeric_value)
+
+        # Build DataFrame
+        columns: dict[str, Column] = {}
+        for idx, name in enumerate(column_names):
+            columns[name] = Column(
+                name=name,
+                index=idx,
+                data=np.array(data_arrays[idx], dtype=np.float64),
+            )
+
+        return DataFrame(
+            columns=columns,
+            source_file=path,
+            row_count=len(data_arrays[0]),
+            _column_order=column_names,
+            block_index=block_idx,
+        )
+
+    def _split_line(self, line: str) -> list[str]:
+        """Split a line by the configured delimiter.
+
+        For space delimiter, splits on any whitespace (handles multiple spaces).
+        For other delimiters, splits exactly on that delimiter.
+
+        Args:
+            line: The line to split.
+
+        Returns:
+            List of field values (not yet stripped).
+        """
+        if self.config.delimiter == " ":
+            # Split on any whitespace - handles multiple spaces
+            return line.split()
+        else:
+            return line.split(self.config.delimiter)
+
     def _read_lines(self, path: Path) -> list[str]:
         """Read all lines from file with proper encoding."""
         with open(path, encoding=self.config.encoding) as f:
@@ -211,7 +400,7 @@ class TSVParser:
 
     def _parse_header(self, line: str) -> list[str]:
         """Parse header line into column names."""
-        names = line.split(self.config.delimiter)
+        names = self._split_line(line)
         return [name.strip() for name in names]
 
 

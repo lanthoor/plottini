@@ -273,3 +273,108 @@ class TestParseErrorFormat:
 
         error_str = str(exc_info.value)
         assert "Context:" in error_str
+
+
+class TestParseBlocks:
+    """Tests for parse_blocks method for multi-block files."""
+
+    def test_single_block_file(self, tmp_path: Path) -> None:
+        """Test parse_blocks with single block returns one DataFrame."""
+        file = tmp_path / "single_block.tsv"
+        file.write_text("x\ty\n1.0\t2.0\n3.0\t4.0\n")
+
+        parser = TSVParser()
+        dfs = parser.parse_blocks(file)
+
+        assert len(dfs) == 1
+        assert dfs[0].row_count == 2
+        assert dfs[0].block_index == 0
+
+    def test_multiple_blocks_with_comments(self, tmp_path: Path) -> None:
+        """Test parse_blocks with multiple blocks separated by comments."""
+        file = tmp_path / "multi_block.tsv"
+        content = """x\ty
+1.0\t2.0
+3.0\t4.0
+# Block separator
+x\ty
+5.0\t6.0
+7.0\t8.0
+9.0\t10.0
+"""
+        file.write_text(content)
+
+        parser = TSVParser()
+        dfs = parser.parse_blocks(file)
+
+        assert len(dfs) == 2
+        assert dfs[0].row_count == 2
+        assert dfs[0].block_index == 0
+        assert dfs[1].row_count == 3
+        assert dfs[1].block_index == 1
+
+    def test_multiple_blocks_with_empty_lines(self, tmp_path: Path) -> None:
+        """Test parse_blocks with blocks separated by empty lines."""
+        file = tmp_path / "multi_block_empty.tsv"
+        content = """x\ty
+1.0\t2.0
+
+x\ty
+3.0\t4.0
+"""
+        file.write_text(content)
+
+        parser = TSVParser()
+        dfs = parser.parse_blocks(file)
+
+        assert len(dfs) == 2
+        assert dfs[0].row_count == 1
+        assert dfs[1].row_count == 1
+
+    def test_blocks_no_header(self, tmp_path: Path) -> None:
+        """Test parse_blocks without headers."""
+        file = tmp_path / "multi_block_no_header.tsv"
+        content = """1.0\t2.0
+3.0\t4.0
+# separator
+5.0\t6.0
+"""
+        file.write_text(content)
+
+        config = ParserConfig(has_header=False)
+        parser = TSVParser(config)
+        dfs = parser.parse_blocks(file)
+
+        assert len(dfs) == 2
+        assert dfs[0].get_column_names() == ["Column 1", "Column 2"]
+        assert dfs[1].get_column_names() == ["Column 1", "Column 2"]
+
+    def test_blocks_preserve_source_file(self, tmp_path: Path) -> None:
+        """Test that all blocks reference the same source file."""
+        file = tmp_path / "multi_block.tsv"
+        file.write_text("x\ty\n1.0\t2.0\n# sep\nx\ty\n3.0\t4.0\n")
+
+        parser = TSVParser()
+        dfs = parser.parse_blocks(file)
+
+        assert len(dfs) == 2
+        assert dfs[0].source_file == file
+        assert dfs[1].source_file == file
+
+    def test_space_delimiter_multi_block(self, tmp_path: Path) -> None:
+        """Test parse_blocks with space delimiter."""
+        file = tmp_path / "space_multi.dat"
+        content = """1.0  2.0  3.0
+4.0  5.0  6.0
+# block 2
+7.0  8.0  9.0
+"""
+        file.write_text(content)
+
+        config = ParserConfig(has_header=False, delimiter=" ")
+        parser = TSVParser(config)
+        dfs = parser.parse_blocks(file)
+
+        assert len(dfs) == 2
+        assert dfs[0].row_count == 2
+        assert dfs[1].row_count == 1

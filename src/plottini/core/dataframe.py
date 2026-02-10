@@ -46,12 +46,14 @@ class DataFrame:
         columns: Dictionary mapping column names to Column objects
         source_file: Path to the original TSV file
         row_count: Number of data rows
+        block_index: Index of data block within file (for multi-block files)
     """
 
     columns: dict[str, Column]
     source_file: Path
     row_count: int
     _column_order: list[str] = field(default_factory=list)
+    block_index: int | None = None
 
     def __post_init__(self) -> None:
         """Initialize column order if not provided."""
@@ -195,6 +197,7 @@ class DataFrame:
             source_file=self.source_file,
             row_count=int(np.sum(mask)),
             _column_order=self._column_order.copy(),
+            block_index=self.block_index,
         )
 
 
