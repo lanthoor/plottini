@@ -5,7 +5,7 @@ import plottini
 
 def test_version():
     """Test that version is accessible."""
-    assert plottini.__version__ == "0.3.0"
+    assert plottini.__version__ == "0.3.1"
 
 
 def test_license():
