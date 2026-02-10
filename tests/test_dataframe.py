@@ -422,6 +422,27 @@ class TestAlignDataFrames:
 
         assert "cannot be empty" in str(exc_info.value)
 
+    def test_align_dataframes_empty_dataframe_raises_error(self, df1: DataFrame) -> None:
+        """Test that empty DataFrame raises ValueError with clear message."""
+        from plottini.core.dataframe import align_dataframes, create_empty_dataframe
+
+        # Create an empty DataFrame with the alignment column
+        col_time = Column(
+            name="time",
+            index=0,
+            data=np.array([], dtype=np.float64),
+        )
+        empty_df = DataFrame(
+            columns={"time": col_time},
+            source_file=Path("empty.tsv"),
+            row_count=0,
+        )
+
+        with pytest.raises(ValueError) as exc_info:
+            align_dataframes([df1, empty_df], "time")
+
+        assert "empty" in str(exc_info.value).lower()
+
     def test_align_dataframes_missing_column_raises_error(self, df1: DataFrame) -> None:
         """Test that missing alignment column raises KeyError."""
         from plottini.core.dataframe import align_dataframes

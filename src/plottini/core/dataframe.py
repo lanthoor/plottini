@@ -271,8 +271,13 @@ def align_dataframes(
                 f"(source: {df.source_file}). Available columns: {available}"
             )
 
+    # Extract alignment-column values and ensure there is data to align
+    align_values_per_df = [df[align_column] for df in dataframes]
+    if any(values.size == 0 for values in align_values_per_df):
+        raise ValueError("Cannot align empty DataFrames")
+
     # Compute union range (min and max across all DataFrames)
-    all_values = np.concatenate([df[align_column] for df in dataframes])
+    all_values = np.concatenate(align_values_per_df)
     x_min = float(np.min(all_values))
     x_max = float(np.max(all_values))
 
