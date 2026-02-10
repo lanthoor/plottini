@@ -479,8 +479,7 @@ uv run plottini version
 uv build
 
 # Check package
-uv pip install twine --system
-twine check dist/*
+uv run twine check dist/*
 ```
 
 ---
