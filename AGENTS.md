@@ -458,7 +458,7 @@ def validate_expression(expr: str) -> bool:
 
 ```bash
 # Install dependencies
-uv sync --dev
+uv sync --extra dev
 
 # Run tests
 uv run pytest -v

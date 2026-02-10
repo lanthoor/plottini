@@ -40,7 +40,7 @@ cd plottini
 
 ```bash
 # Using uv (recommended - faster and more reliable)
-uv sync --dev
+uv sync --extra dev
 
 # Or using pip with virtual environment
 python -m venv venv
