@@ -22,7 +22,7 @@ from plottini.config.schema import (
 )
 from plottini.core.parser import ParserConfig, TSVParser
 from plottini.core.plotter import ChartType, PlotConfig, SeriesConfig
-from plottini.ui.state import create_default_state
+from plottini.ui.state import DataSource, create_default_state
 
 if TYPE_CHECKING:
     pass
@@ -253,13 +253,16 @@ class PlottiniApp:
                 encoding=first_file.encoding,
             )
 
-            # Parse files
+            # Parse files using parse_blocks to handle multi-block files
             parser = TSVParser(self.state.parser_config)
             for file_config in config.files:
                 try:
-                    df = parser.parse(file_config.path)
+                    dataframes = parser.parse_blocks(file_config.path)
                     self.state.loaded_files.append(file_config.path)
-                    self.state.parsed_data[file_config.path] = df
+                    for df in dataframes:
+                        ds = DataSource(file_path=file_config.path, block_index=df.block_index)
+                        self.state.data_sources.append(ds)
+                        self.state.parsed_data[ds] = df
                 except Exception as e:
                     self.state.set_error(f"Error loading {file_config.path}: {e}")
 
