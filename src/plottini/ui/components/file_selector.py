@@ -140,16 +140,7 @@ class FileSelector:
                 self.state.data_sources.remove(ds)
                 self.state.parsed_data.pop(ds, None)
 
-            # Remove series that reference removed data sources
-            # (series use source_file_index which refers to data_sources list)
-            removed_indices = {
-                self.state.data_sources.index(ds)
-                for ds in sources_to_remove
-                if ds in self.state.data_sources
-            }
-            # Actually the sources are already removed, so we need to track
-            # which indices were removed and update series accordingly
-            # For simplicity, just clear series when files change
+            # Clear series when files change (series indices would be invalid)
             self.state.series.clear()
 
             self.state.notify_change()
