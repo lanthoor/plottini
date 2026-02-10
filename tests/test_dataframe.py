@@ -424,7 +424,7 @@ class TestAlignDataFrames:
 
     def test_align_dataframes_empty_dataframe_raises_error(self, df1: DataFrame) -> None:
         """Test that empty DataFrame raises ValueError with clear message."""
-        from plottini.core.dataframe import align_dataframes, create_empty_dataframe
+        from plottini.core.dataframe import align_dataframes
 
         # Create an empty DataFrame with the alignment column
         col_time = Column(
