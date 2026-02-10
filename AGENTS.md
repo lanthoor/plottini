@@ -458,27 +458,28 @@ def validate_expression(expr: str) -> bool:
 
 ```bash
 # Install dependencies
-uv pip install -e ".[dev]"
+uv sync --dev
 
 # Run tests
-pytest -v
-pytest --cov=plottini --cov-report=html
+uv run pytest -v
+uv run pytest --cov=plottini --cov-report=html
 
 # Check code quality
-ruff check src/ tests/
-mypy src/plottini
+uv run ruff check src/ tests/
+uv run mypy src/plottini
 
 # Format code
-ruff format src/ tests/
+uv run ruff format src/ tests/
 
 # Run CLI
-plottini --help
-plottini version
+uv run plottini --help
+uv run plottini version
 
 # Build package
-python -m build
+uv build
 
 # Check package
+uv pip install twine --system
 twine check dist/*
 ```
 
