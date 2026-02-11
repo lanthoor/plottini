@@ -80,13 +80,16 @@ class FileSelector:
         """
         # Save uploaded file to temp location and parse
         import tempfile
+        import uuid
 
         # Create temp file with original name
         temp_dir = Path(tempfile.gettempdir()) / "plottini_uploads"
         temp_dir.mkdir(exist_ok=True)
 
-        # e.file is a FileUpload object with name, and async save() method
-        file_path = temp_dir / e.file.name
+        # Sanitize filename: extract just the name part and add UUID to prevent collisions
+        safe_name = Path(e.file.name).name  # Strip any path components
+        unique_name = f"{uuid.uuid4().hex[:8]}_{safe_name}"
+        file_path = temp_dir / unique_name
         await e.file.save(file_path)
 
         self._load_file(file_path)
@@ -186,9 +189,11 @@ class FileSelector:
         """Re-parse all files with current parser settings."""
         parser = TSVParser(self.state.parser_config)
 
-        # Clear existing data sources and parsed data
+        # Clear existing data sources, parsed data, and series
+        # (series indices would be invalid after re-parsing)
         self.state.data_sources.clear()
         self.state.parsed_data.clear()
+        self.state.series.clear()
 
         for file_path in list(self.state.loaded_files):
             try:

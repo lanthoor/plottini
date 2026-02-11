@@ -1,17 +1,16 @@
 """Data preview table component.
 
 Displays parsed DataFrame data in a scrollable table format
-with support for selecting which file to preview.
+with support for selecting which data source to preview.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from nicegui import ui
 
-from plottini.ui.state import AppState
+from plottini.ui.state import AppState, DataSource
 
 
 class DataPreview:
@@ -26,7 +25,7 @@ class DataPreview:
             state: Application state
         """
         self.state = state
-        self.selected_file: Path | None = None
+        self.selected_source: DataSource | None = None
         self._create_ui()
         state.add_change_callback(self._on_state_change)
 
@@ -35,12 +34,12 @@ class DataPreview:
         with ui.card().classes("w-full h-full"):
             with ui.row().classes("w-full justify-between items-center mb-2"):
                 ui.label("Data Preview").classes("text-lg font-semibold")
-                self.file_select = ui.select(
+                self.source_select = ui.select(
                     [],
-                    label="File",
+                    label="Data Source",
                     value=None,
-                    on_change=self._on_file_select,
-                ).classes("w-48")
+                    on_change=self._on_source_select,
+                ).classes("w-64")
 
             # Table container
             self.table_container = (
@@ -50,22 +49,30 @@ class DataPreview:
             # Row count info
             self.row_info = ui.label("No data loaded").classes("text-sm text-gray-500 mt-2")
 
-    def _on_file_select(self) -> None:
-        """Handle file selection change."""
-        if self.file_select.value:
-            self.selected_file = Path(self.file_select.value)
-            self._update_table()
+    def _on_source_select(self) -> None:
+        """Handle data source selection change."""
+        if self.source_select.value is not None:
+            # Find the DataSource by index
+            idx = self.source_select.value
+            if 0 <= idx < len(self.state.data_sources):
+                self.selected_source = self.state.data_sources[idx]
+                self._update_table()
 
     def _on_state_change(self) -> None:
         """Handle state changes."""
-        # Update file selector options
-        options = {str(f): f.name for f in self.state.loaded_files}
-        self.file_select.options = options
+        # Update source selector options - use index as value, display_name as label
+        options = {i: ds.display_name for i, ds in enumerate(self.state.data_sources)}
+        self.source_select.options = options
 
-        # Auto-select first file if none selected
-        if not self.selected_file and self.state.loaded_files:
-            self.selected_file = self.state.loaded_files[0]
-            self.file_select.value = str(self.selected_file)
+        # Auto-select first source if none selected
+        if self.selected_source is None and self.state.data_sources:
+            self.selected_source = self.state.data_sources[0]
+            self.source_select.value = 0
+
+        # Clear selection if selected source no longer exists
+        if self.selected_source and self.selected_source not in self.state.data_sources:
+            self.selected_source = None
+            self.source_select.value = None
 
         self._update_table()
 
@@ -73,13 +80,13 @@ class DataPreview:
         """Update the preview table."""
         self.table_container.clear()
 
-        if not self.selected_file or self.selected_file not in self.state.parsed_data:
+        if not self.selected_source or self.selected_source not in self.state.parsed_data:
             with self.table_container:
                 ui.label("No data loaded").classes("text-gray-500 italic p-4")
             self.row_info.text = "No data loaded"
             return
 
-        df = self.state.parsed_data[self.selected_file]
+        df = self.state.parsed_data[self.selected_source]
         columns = df.get_column_names()
 
         if not columns:

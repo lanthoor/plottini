@@ -54,7 +54,7 @@ def render(config: str, output: str, fmt: str | None, dpi: int | None) -> None:
     click.echo(f"Loading configuration from: {config}")
     cfg = load_config(config)
 
-    # Parse data files
+    # Parse data files using parse_blocks for multi-block support
     parser_config = ParserConfig(
         has_header=cfg.files[0].has_header if cfg.files else True,
         comment_chars=cfg.files[0].comment_chars if cfg.files else ["#"],
@@ -65,8 +65,11 @@ def render(config: str, output: str, fmt: str | None, dpi: int | None) -> None:
     dataframes = []
     for file_cfg in cfg.files:
         click.echo(f"  Loading: {file_cfg.path}")
-        df = parser.parse(file_cfg.path)
-        dataframes.append(df)
+        file_dfs = parser.parse_blocks(file_cfg.path)
+        n_blocks = len(file_dfs)
+        if n_blocks > 1:
+            click.echo(f"    Found {n_blocks} data blocks")
+        dataframes.extend(file_dfs)
 
     if not dataframes:
         click.echo("Error: No data files specified in config", err=True)

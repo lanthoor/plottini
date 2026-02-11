@@ -275,8 +275,9 @@ class PlottiniApp:
                 for df in self.state.parsed_data.values():
                     try:
                         df.add_derived_column(dc.name, dc.expression)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        # Log error but continue loading - don't fail entire config
+                        self.state.set_error(f"Error adding derived column '{dc.name}': {e}")
 
         # Load filters
         self.state.filters = list(config.filters)

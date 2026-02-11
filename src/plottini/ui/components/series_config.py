@@ -223,25 +223,12 @@ class SeriesConfigPanel:
             self.state.series[index] = SeriesConfig(**kwargs)
             self.state.notify_change()
 
-    def _on_file_change(self, index: int, file_path_str: str) -> None:
-        """Handle source file selection change.
-
-        Args:
-            index: Index of series being changed
-            file_path_str: String path of selected file
-        """
-        if 0 <= index < len(self.state.series):
-            try:
-                file_paths = [str(f) for f in self.state.loaded_files]
-                file_index = file_paths.index(file_path_str)
-                self._on_series_change(index, "source_file_index", file_index)
-            except ValueError:
-                pass
-
     def _on_state_change(self) -> None:
-        """Handle state changes from other components."""
-        # Only update if columns might have changed
-        pass
+        """Handle state changes from other components.
+
+        Refreshes the series UI when files/columns change.
+        """
+        self._update_series()
 
 
 def create_series_config(state: AppState) -> SeriesConfigPanel:

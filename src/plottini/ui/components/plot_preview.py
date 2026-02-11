@@ -93,6 +93,7 @@ class PlotPreview:
             await asyncio.sleep(self.DEBOUNCE_MS / 1000)
             self._render_preview()
         except asyncio.CancelledError:
+            # Cancellation is expected when a newer debounced update supersedes this task
             pass
 
     def _render_preview(self) -> None:
@@ -121,7 +122,7 @@ class PlotPreview:
                     try:
                         dataframes = [df.filter_rows(f.column, f.min, f.max) for df in dataframes]
                     except KeyError:
-                        # Column doesn't exist in some dataframes
+                        # Column doesn't exist in some dataframes - skip filter
                         pass
 
             # Apply alignment if enabled
@@ -135,7 +136,7 @@ class PlotPreview:
                     aligned = align_dataframes(dataframes, self.state.alignment.column)
                     dataframes = aligned.dataframes
                 except (KeyError, ValueError):
-                    # Alignment column doesn't exist or other issue
+                    # Alignment column doesn't exist or other issue - skip alignment
                     pass
 
             # Expand series across all blocks
@@ -153,15 +154,18 @@ class PlotPreview:
             self.state.clear_error()
 
         except Exception as e:
+            # Display error but don't trigger notify_change to avoid re-render loop
             self.error_display.text = f"Error: {e}"
-            self.state.set_error(str(e))
             self._show_placeholder(f"Rendering error: {e}")
 
     def _expand_series_for_blocks(self, dataframes: list) -> list[SeriesConfig]:
         """Expand series configurations to plot each block with different colors.
 
         For each series configuration, creates separate SeriesConfig entries
-        for each DataFrame (block), assigning distinct colors from the palette.
+        for each DataFrame (block). For single-block data, the user's chosen
+        color is preserved. For multi-block data, colors are auto-assigned
+        from the palette, but the user's color is used for the first block
+        if specified.
 
         Args:
             dataframes: List of DataFrames to plot
@@ -173,6 +177,7 @@ class PlotPreview:
         color_idx = 0
 
         for series in self.state.series:
+            block_count = 0
             # For each user-defined series, create one line per block
             for df_idx, df in enumerate(dataframes):
                 # Check if this DataFrame has the required columns
@@ -190,9 +195,15 @@ class PlotPreview:
                 else:
                     label = series.label
 
-                # Assign color from palette (cycle through)
-                color = COLORBLIND_PALETTE[color_idx % len(COLORBLIND_PALETTE)]
+                # Determine color:
+                # - For single block or first block: use user's color if set
+                # - For additional blocks: auto-assign from palette
+                if block_count == 0 and series.color:
+                    color = series.color
+                else:
+                    color = COLORBLIND_PALETTE[color_idx % len(COLORBLIND_PALETTE)]
                 color_idx += 1
+                block_count += 1
 
                 expanded.append(
                     SeriesConfig(
