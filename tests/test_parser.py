@@ -378,3 +378,152 @@ x\ty
         assert len(dfs) == 2
         assert dfs[0].row_count == 2
         assert dfs[1].row_count == 1
+
+
+class TestParserEdgeCasesAdditional:
+    """Additional edge case tests for parser."""
+
+    def test_unicode_in_headers(self, tmp_path: Path) -> None:
+        """Test parsing file with unicode characters in headers."""
+        file = tmp_path / "unicode.tsv"
+        file.write_text("Temperature_\u00b0C\tPressure_hPa\n25.0\t1013.0\n", encoding="utf-8")
+
+        parser = TSVParser()
+        df = parser.parse(file)
+
+        assert "Temperature_\u00b0C" in df.get_column_names()
+        assert "Pressure_hPa" in df.get_column_names()
+
+    def test_very_long_header_names(self, tmp_path: Path) -> None:
+        """Test parsing file with very long header names."""
+        long_name = "a" * 200
+        file = tmp_path / "long_header.tsv"
+        file.write_text(f"{long_name}\ty\n1.0\t2.0\n")
+
+        parser = TSVParser()
+        df = parser.parse(file)
+
+        assert long_name in df.get_column_names()
+
+    def test_mixed_line_endings(self, tmp_path: Path) -> None:
+        """Test parsing file with mixed line endings (\\r\\n and \\n)."""
+        file = tmp_path / "mixed_endings.tsv"
+        file.write_bytes(b"x\ty\r\n1.0\t2.0\n3.0\t4.0\r\n")
+
+        parser = TSVParser()
+        df = parser.parse(file)
+
+        assert df.row_count == 2
+
+    def test_trailing_delimiter(self, tmp_path: Path) -> None:
+        """Test parsing file with trailing delimiter on lines."""
+        file = tmp_path / "trailing.tsv"
+        file.write_text("x\ty\t\n1.0\t2.0\t\n3.0\t4.0\t\n")
+
+        parser = TSVParser()
+        df = parser.parse(file)
+
+        # Should handle trailing delimiters gracefully
+        assert df.row_count == 2
+        # Last column should be parsed (even if empty or dropped)
+
+    def test_single_column_file(self, tmp_path: Path) -> None:
+        """Test parsing file with only one column."""
+        file = tmp_path / "single_col.tsv"
+        file.write_text("values\n1.0\n2.0\n3.0\n")
+
+        parser = TSVParser()
+        df = parser.parse(file)
+
+        assert df.row_count == 3
+        assert df.get_column_names() == ["values"]
+
+    def test_header_with_numbers(self, tmp_path: Path) -> None:
+        """Test parsing file where headers start with numbers."""
+        file = tmp_path / "num_headers.tsv"
+        file.write_text("1st_column\t2nd_column\n1.0\t2.0\n")
+
+        parser = TSVParser()
+        df = parser.parse(file)
+
+        assert "1st_column" in df.get_column_names()
+        assert "2nd_column" in df.get_column_names()
+
+    def test_very_large_numbers(self, tmp_path: Path) -> None:
+        """Test parsing very large numbers."""
+        file = tmp_path / "large_nums.tsv"
+        file.write_text("x\ty\n1.0e308\t-1.0e308\n")
+
+        parser = TSVParser()
+        df = parser.parse(file)
+
+        assert df["x"][0] == 1.0e308
+        assert df["y"][0] == -1.0e308
+
+    def test_very_small_numbers(self, tmp_path: Path) -> None:
+        """Test parsing very small numbers."""
+        file = tmp_path / "small_nums.tsv"
+        file.write_text("x\ty\n1.0e-308\t-1.0e-308\n")
+
+        parser = TSVParser()
+        df = parser.parse(file)
+
+        assert df["x"][0] == 1.0e-308
+        assert df["y"][0] == -1.0e-308
+
+
+class TestParseBlocksEdgeCases:
+    """Edge cases for multi-block parsing."""
+
+    def test_consecutive_separators(self, tmp_path: Path) -> None:
+        """Test parsing with multiple consecutive separator lines."""
+        file = tmp_path / "multi_sep.tsv"
+        file.write_text("x\ty\n1.0\t2.0\n\n\n\nx\ty\n3.0\t4.0\n")
+
+        parser = TSVParser()
+        dfs = parser.parse_blocks(file)
+
+        # Empty blocks should be skipped
+        assert len(dfs) == 2
+
+    def test_block_at_end_with_trailing_newlines(self, tmp_path: Path) -> None:
+        """Test parsing block at end of file with trailing newlines."""
+        file = tmp_path / "trailing.tsv"
+        file.write_text("x\ty\n1.0\t2.0\n\n\n")
+
+        parser = TSVParser()
+        dfs = parser.parse_blocks(file)
+
+        assert len(dfs) == 1
+        assert dfs[0].row_count == 1
+
+    def test_many_blocks(self, tmp_path: Path) -> None:
+        """Test parsing file with many blocks."""
+        content = ""
+        for i in range(10):
+            content += f"x\ty\n{float(i)}\t{float(i + 1)}\n\n"
+
+        file = tmp_path / "many_blocks.tsv"
+        file.write_text(content)
+
+        parser = TSVParser()
+        dfs = parser.parse_blocks(file)
+
+        assert len(dfs) == 10
+        for i, df in enumerate(dfs):
+            assert df.block_index == i
+
+    def test_blocks_with_different_column_counts(self, tmp_path: Path) -> None:
+        """Test parsing blocks with different column counts."""
+        content = """x\ty\n1.0\t2.0\n
+x\ty\tz\n3.0\t4.0\t5.0\n"""
+
+        file = tmp_path / "diff_cols.tsv"
+        file.write_text(content)
+
+        parser = TSVParser()
+        dfs = parser.parse_blocks(file)
+
+        assert len(dfs) == 2
+        assert len(dfs[0].get_column_names()) == 2
+        assert len(dfs[1].get_column_names()) == 3

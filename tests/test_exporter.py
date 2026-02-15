@@ -247,6 +247,134 @@ class TestExporterErrors:
         assert "Cannot create directory" in error.message
 
 
+class TestExporterEdgeCases:
+    """Edge case tests for exporter."""
+
+    def test_export_with_unicode_title(
+        self, sample_figure: Figure, exporter: Exporter, tmp_path: Path
+    ) -> None:
+        """Test export with unicode in figure title."""
+        sample_figure.axes[0].set_title("Temperature (\u00b0C) vs Time")
+        output = tmp_path / "unicode.png"
+        config = ExportConfig(format=ExportFormat.PNG)
+
+        result = exporter.export(sample_figure, output, config)
+        assert result.exists()
+
+    def test_export_with_unicode_labels(
+        self, sample_figure: Figure, exporter: Exporter, tmp_path: Path
+    ) -> None:
+        """Test export with unicode in axis labels."""
+        sample_figure.axes[0].set_xlabel("Time (\u03bcs)")  # microseconds
+        sample_figure.axes[0].set_ylabel("Energy (J/mol\u00b7K)")  # J per mol K
+        output = tmp_path / "unicode_labels.png"
+        config = ExportConfig(format=ExportFormat.PNG)
+
+        result = exporter.export(sample_figure, output, config)
+        assert result.exists()
+
+    def test_export_very_large_figure(self, exporter: Exporter, tmp_path: Path) -> None:
+        """Test export with large figure dimensions."""
+        fig, ax = plt.subplots(figsize=(20, 20))
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        output = tmp_path / "large.png"
+        config = ExportConfig(format=ExportFormat.PNG, dpi=72)
+
+        result = exporter.export(fig, output, config)
+        assert result.exists()
+        plt.close(fig)
+
+    def test_export_very_small_figure(self, exporter: Exporter, tmp_path: Path) -> None:
+        """Test export with small figure dimensions."""
+        fig, ax = plt.subplots(figsize=(2, 2))
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        output = tmp_path / "small.png"
+        config = ExportConfig(format=ExportFormat.PNG, dpi=72)
+
+        result = exporter.export(fig, output, config)
+        assert result.exists()
+        plt.close(fig)
+
+    def test_export_figure_with_no_data(self, exporter: Exporter, tmp_path: Path) -> None:
+        """Test export of empty figure."""
+        fig, ax = plt.subplots()
+        # No data plotted
+
+        output = tmp_path / "empty.png"
+        config = ExportConfig(format=ExportFormat.PNG)
+
+        result = exporter.export(fig, output, config)
+        assert result.exists()
+        plt.close(fig)
+
+    def test_export_figure_with_many_series(self, exporter: Exporter, tmp_path: Path) -> None:
+        """Test export of figure with many data series."""
+        fig, ax = plt.subplots()
+        for i in range(20):
+            ax.plot([1, 2, 3], [i, i + 1, i + 2], label=f"Series {i}")
+        ax.legend()
+
+        output = tmp_path / "many_series.png"
+        config = ExportConfig(format=ExportFormat.PNG)
+
+        result = exporter.export(fig, output, config)
+        assert result.exists()
+        plt.close(fig)
+
+    def test_export_multiple_formats_all_succeed(
+        self, sample_figure: Figure, exporter: Exporter, tmp_path: Path
+    ) -> None:
+        """Test exporting to all supported formats."""
+        base_path = tmp_path / "all_formats"
+        formats = [ExportFormat.PNG, ExportFormat.SVG, ExportFormat.PDF, ExportFormat.EPS]
+
+        results = exporter.export_multiple(sample_figure, base_path, formats)
+
+        assert len(results) == 4
+        assert all(p.exists() for p in results)
+
+    def test_export_high_dpi(
+        self, sample_figure: Figure, exporter: Exporter, tmp_path: Path
+    ) -> None:
+        """Test export with very high DPI."""
+        output = tmp_path / "high_dpi.png"
+        config = ExportConfig(format=ExportFormat.PNG, dpi=600)
+
+        result = exporter.export(sample_figure, output, config)
+        assert result.exists()
+        # High DPI should produce larger file
+        assert result.stat().st_size > 10000
+
+    def test_export_path_with_spaces(
+        self, sample_figure: Figure, exporter: Exporter, tmp_path: Path
+    ) -> None:
+        """Test export to path with spaces in name."""
+        output = tmp_path / "my output file.png"
+        config = ExportConfig(format=ExportFormat.PNG)
+
+        result = exporter.export(sample_figure, output, config)
+        assert result.exists()
+        assert "my output file" in str(result)
+
+    def test_export_overwrites_existing(
+        self, sample_figure: Figure, exporter: Exporter, tmp_path: Path
+    ) -> None:
+        """Test export overwrites existing file."""
+        output = tmp_path / "existing.png"
+        # Create existing file
+        output.write_text("dummy content")
+        original_size = output.stat().st_size
+
+        config = ExportConfig(format=ExportFormat.PNG)
+        result = exporter.export(sample_figure, output, config)
+
+        assert result.exists()
+        # File should be different (actual PNG, not dummy text)
+        assert result.stat().st_size != original_size
+
+
 # Cleanup matplotlib figures after tests
 @pytest.fixture(autouse=True)
 def cleanup_figures() -> Generator[None, None, None]:

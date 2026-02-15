@@ -1,11 +1,14 @@
 """User interface components and application logic."""
 
-from plottini.ui.app import PlottiniApp, start_app
-from plottini.ui.state import AppState, create_default_state
+from plottini.ui.app import main, start_app
+from plottini.ui.state import AppState, DataSource, UploadedFile, create_default_state, get_state
 
 __all__ = [
-    "PlottiniApp",
+    "main",
     "start_app",
     "AppState",
+    "DataSource",
+    "UploadedFile",
     "create_default_state",
+    "get_state",
 ]

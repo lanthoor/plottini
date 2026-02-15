@@ -1,0 +1,11 @@
+[theme]
+# Uses system preference (light/dark) automatically
+# Primary color matches the colorblind-safe palette
+primaryColor = "#0072B2"
+
+[server]
+headless = true
+runOnSave = false
+
+[browser]
+gatherUsageStats = false
