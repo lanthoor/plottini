@@ -487,3 +487,144 @@ class TestEvaluateExpressionErrors:
         columns = {"col1": np.array([1.0, 2.0, 3.0])}
         with pytest.raises(ExpressionError):
             evaluate_expression("__import__('os')", columns)
+
+
+class TestApplyTransformEdgeCases:
+    """Edge case tests for apply_transform."""
+
+    def test_transform_empty_array(self):
+        """Test transform with empty array."""
+        data = np.array([], dtype=np.float64)
+        result = apply_transform(data, Transform.SQUARE)
+        assert len(result) == 0
+        assert result.dtype == np.float64
+
+    def test_transform_single_element(self):
+        """Test transform with single element array."""
+        data = np.array([4.0], dtype=np.float64)
+        result = apply_transform(data, Transform.SQRT)
+        assert_array_almost_equal(result, [2.0])
+
+    def test_transform_large_array(self):
+        """Test transform with large array for performance."""
+        data = np.arange(1.0, 10001.0, dtype=np.float64)
+        result = apply_transform(data, Transform.LOG10)
+        assert len(result) == 10000
+        assert_array_almost_equal(result[0], 0.0)
+        assert_array_almost_equal(result[-1], 4.0)
+
+    def test_all_transforms_on_valid_data(self):
+        """Test all transforms work on appropriate valid data."""
+        # Data valid for most transforms
+        data = np.array([0.5, 1.0, 2.0], dtype=np.float64)
+
+        # Log transforms need positive values
+        assert len(apply_transform(data, Transform.LOG)) == 3
+        assert len(apply_transform(data, Transform.LOG10)) == 3
+        assert len(apply_transform(data, Transform.LOG2)) == 3
+
+        # Power transforms work on any values
+        assert len(apply_transform(data, Transform.SQUARE)) == 3
+        assert len(apply_transform(data, Transform.CUBE)) == 3
+        assert len(apply_transform(data, Transform.SQRT)) == 3
+        assert len(apply_transform(data, Transform.CBRT)) == 3
+
+        # Trig transforms work on any values
+        assert len(apply_transform(data, Transform.SIN)) == 3
+        assert len(apply_transform(data, Transform.COS)) == 3
+        assert len(apply_transform(data, Transform.TAN)) == 3
+        assert len(apply_transform(data, Transform.ARCTAN)) == 3
+
+        # Arc trig needs [-1, 1]
+        arcsin_data = np.array([-0.5, 0.0, 0.5], dtype=np.float64)
+        assert len(apply_transform(arcsin_data, Transform.ARCSIN)) == 3
+        assert len(apply_transform(arcsin_data, Transform.ARCCOS)) == 3
+
+        # Other transforms
+        assert len(apply_transform(data, Transform.ABS)) == 3
+        assert len(apply_transform(data, Transform.INVERSE)) == 3
+        assert len(apply_transform(data, Transform.EXP)) == 3
+        assert len(apply_transform(data, Transform.NEGATE)) == 3
+
+
+class TestEvaluateExpressionEdgeCases:
+    """Edge case tests for evaluate_expression."""
+
+    def test_expression_with_nested_parentheses(self):
+        """Test expression evaluation with nested parentheses."""
+        columns = {"x": np.array([2.0, 3.0, 4.0])}
+        result = evaluate_expression("((x + 1) * 2) - 1", columns)
+        expected = np.array([5.0, 7.0, 9.0])
+        assert_array_almost_equal(result, expected)
+
+    def test_expression_with_multiple_operators(self):
+        """Test expression with multiple chained operators."""
+        columns = {"x": np.array([1.0, 2.0, 3.0])}
+        result = evaluate_expression("x + x * x - x / x", columns)
+        # x + x^2 - 1 = [1 + 1 - 1, 2 + 4 - 1, 3 + 9 - 1] = [1, 5, 11]
+        expected = np.array([1.0, 5.0, 11.0])
+        assert_array_almost_equal(result, expected)
+
+    def test_expression_with_float_constants(self):
+        """Test expression with float constants."""
+        columns = {"x": np.array([1.0, 2.0, 3.0])}
+        result = evaluate_expression("x * 1.5 + 0.5", columns)
+        expected = np.array([2.0, 3.5, 5.0])
+        assert_array_almost_equal(result, expected)
+
+    def test_expression_with_negative_constants(self):
+        """Test expression with negative constants."""
+        columns = {"x": np.array([1.0, 2.0, 3.0])}
+        result = evaluate_expression("x * -2", columns)
+        expected = np.array([-2.0, -4.0, -6.0])
+        assert_array_almost_equal(result, expected)
+
+    def test_expression_column_only(self):
+        """Test expression that's just a column reference."""
+        columns = {"x": np.array([1.0, 2.0, 3.0])}
+        result = evaluate_expression("x", columns)
+        expected = np.array([1.0, 2.0, 3.0])
+        assert_array_almost_equal(result, expected)
+
+    def test_expression_constant_only(self):
+        """Test expression that's just a constant."""
+        columns = {"x": np.array([1.0, 2.0, 3.0])}
+        result = evaluate_expression("42", columns)
+        # Result could be scalar or array - just check it evaluates
+        if isinstance(result, np.ndarray):
+            assert result.size >= 1
+        else:
+            assert result == 42
+
+    def test_expression_with_all_allowed_functions(self):
+        """Test expressions using all allowed functions."""
+        columns = {"x": np.array([1.0, 4.0, 9.0])}
+
+        # Test each allowed function
+        assert len(evaluate_expression("sqrt(x)", columns)) == 3
+        assert len(evaluate_expression("log(x)", columns)) == 3
+        assert len(evaluate_expression("log10(x)", columns)) == 3
+        assert len(evaluate_expression("log2(x)", columns)) == 3
+        assert len(evaluate_expression("abs(x)", columns)) == 3
+        assert len(evaluate_expression("sin(x)", columns)) == 3
+        assert len(evaluate_expression("cos(x)", columns)) == 3
+        assert len(evaluate_expression("tan(x)", columns)) == 3
+        assert len(evaluate_expression("exp(x / 10)", columns)) == 3
+
+    def test_expression_underscore_column_name(self):
+        """Test expression with underscore in column name."""
+        columns = {"my_column": np.array([1.0, 2.0, 3.0])}
+        result = evaluate_expression("my_column * 2", columns)
+        expected = np.array([2.0, 4.0, 6.0])
+        assert_array_almost_equal(result, expected)
+
+    def test_expression_multiple_columns_same_name_prefix(self):
+        """Test expression with columns that have similar names."""
+        columns = {
+            "col": np.array([1.0, 2.0, 3.0]),
+            "col1": np.array([10.0, 20.0, 30.0]),
+            "col12": np.array([100.0, 200.0, 300.0]),
+        }
+        result = evaluate_expression("col + col1 + col12", columns)
+        expected = np.array([111.0, 222.0, 333.0])
+        assert_array_almost_equal(result, expected)

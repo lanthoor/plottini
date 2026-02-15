@@ -246,17 +246,24 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 See [PLAN.md](PLAN.md) for the detailed implementation plan.
 
-### Current Status: Phase 1 - Core Foundation
+### Current Status: Phase 5 - Polish & Testing
 
 - [x] Project structure
 - [x] Package configuration
 - [x] CLI framework
 - [x] CI/CD pipelines
-- [ ] TSV Parser implementation
-- [ ] DataFrame implementation
-- [ ] Basic plotting (Line, Bar, Pie)
-- [ ] Export functionality
-- [ ] UI implementation
+- [x] TSV Parser implementation
+- [x] DataFrame implementation
+- [x] Basic plotting (Line, Bar, Pie)
+- [x] Extended charts (Scatter, Histogram, Polar, Box, Violin, Area, etc.)
+- [x] Export functionality (PNG, SVG, PDF, EPS)
+- [x] Data transformations and derived columns
+- [x] Multi-file support and alignment
+- [x] Secondary Y-axis support
+- [x] Configuration system (TOML)
+- [x] UI implementation with NiceGUI
+- [x] Headless render mode
+- [ ] Final documentation and polish
 
 ---
 

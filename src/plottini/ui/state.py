@@ -1,14 +1,13 @@
-"""State management for Plottini UI.
+"""State management for Plottini UI (Streamlit version).
 
-This module provides centralized state management using dataclasses
-with change callbacks for reactive UI updates.
+This module provides centralized state management using Streamlit's
+session_state for reactive UI updates.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from pathlib import Path
+from io import BytesIO
 from typing import TYPE_CHECKING
 
 from plottini.config.schema import (
@@ -26,31 +25,52 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class DataSource:
-    """Identifier for a data source (file + optional block index).
+class UploadedFile:
+    """Represents an uploaded file in Streamlit.
 
     Attributes:
-        file_path: Path to the source file
+        name: Original filename from the upload
+        content: File content as bytes
+    """
+
+    name: str
+    content: bytes
+
+    def get_file_object(self) -> BytesIO:
+        """Get a file-like object for parsing.
+
+        Returns:
+            BytesIO object containing the file content
+        """
+        return BytesIO(self.content)
+
+
+@dataclass
+class DataSource:
+    """Identifier for a data source (file name + optional block index).
+
+    Attributes:
+        file_name: Name of the source file
         block_index: Index of data block within file (None for single-block files)
     """
 
-    file_path: Path
+    file_name: str
     block_index: int | None = None
 
     @property
     def display_name(self) -> str:
         """Get display name for this data source."""
         if self.block_index is not None:
-            return f"{self.file_path.name} (block {self.block_index + 1})"
-        return self.file_path.name
+            return f"{self.file_name} (block {self.block_index + 1})"
+        return self.file_name
 
     def __hash__(self) -> int:
-        return hash((self.file_path, self.block_index))
+        return hash((self.file_name, self.block_index))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, DataSource):
             return False
-        return self.file_path == other.file_path and self.block_index == other.block_index
+        return self.file_name == other.file_name and self.block_index == other.block_index
 
 
 @dataclass
@@ -58,7 +78,7 @@ class AppState:
     """Central application state.
 
     Attributes:
-        loaded_files: List of original file paths (for tracking unique files)
+        uploaded_files: Dictionary of uploaded files by name
         data_sources: List of DataSource identifiers (file + block)
         parser_config: Configuration for TSV parsing
         parsed_data: Dictionary mapping DataSource to parsed DataFrames
@@ -69,11 +89,10 @@ class AppState:
         plot_config: Plot appearance configuration
         current_figure: Currently rendered matplotlib Figure
         error_message: Current error message (None if no error)
-        is_dirty: Whether state has changed since last render
     """
 
     # Data state
-    loaded_files: list[Path] = field(default_factory=list)
+    uploaded_files: dict[str, UploadedFile] = field(default_factory=dict)
     data_sources: list[DataSource] = field(default_factory=list)
     parser_config: ParserConfig = field(default_factory=ParserConfig)
     parsed_data: dict[DataSource, DataFrame] = field(default_factory=dict)
@@ -90,37 +109,6 @@ class AppState:
     # UI state
     current_figure: Figure | None = None
     error_message: str | None = None
-    is_dirty: bool = False
-
-    # Callbacks (not serialized)
-    _change_callbacks: list[Callable[[], None]] = field(default_factory=list, repr=False)
-
-    def add_change_callback(self, callback: Callable[[], None]) -> None:
-        """Register a callback to be called when state changes.
-
-        Args:
-            callback: Function to call on state change
-        """
-        self._change_callbacks.append(callback)
-
-    def remove_change_callback(self, callback: Callable[[], None]) -> None:
-        """Remove a registered callback.
-
-        Args:
-            callback: Function to remove
-        """
-        if callback in self._change_callbacks:
-            self._change_callbacks.remove(callback)
-
-    def notify_change(self) -> None:
-        """Notify all registered callbacks of state change."""
-        self.is_dirty = True
-        for callback in self._change_callbacks:
-            try:
-                callback()
-            except Exception:
-                # Don't let one callback failure break others
-                pass
 
     def get_all_column_names(self) -> list[str]:
         """Get all available column names from all loaded files.
@@ -143,7 +131,7 @@ class AppState:
 
     def clear_data(self) -> None:
         """Clear all loaded data and reset state."""
-        self.loaded_files.clear()
+        self.uploaded_files.clear()
         self.data_sources.clear()
         self.parsed_data.clear()
         self.derived_columns.clear()
@@ -152,21 +140,18 @@ class AppState:
         self.series.clear()
         self.current_figure = None
         self.error_message = None
-        self.notify_change()
 
     def set_error(self, message: str) -> None:
-        """Set error message and notify.
+        """Set error message.
 
         Args:
             message: Error message to display
         """
         self.error_message = message
-        self.notify_change()
 
     def clear_error(self) -> None:
         """Clear error message."""
         self.error_message = None
-        # Don't notify here to avoid unnecessary updates
 
     def has_data(self) -> bool:
         """Check if any data is loaded.
@@ -192,17 +177,17 @@ class AppState:
         """
         return self.has_data() and self.has_series()
 
-    def get_file_info(self, file_path: Path) -> str:
+    def get_file_info(self, file_name: str) -> str:
         """Get display info for a loaded file.
 
         Args:
-            file_path: Path to the file
+            file_name: Name of the file
 
         Returns:
             String with block count, column count and row count
         """
         # Find all data sources for this file
-        sources = [ds for ds in self.data_sources if ds.file_path == file_path]
+        sources = [ds for ds in self.data_sources if ds.file_name == file_name]
         if not sources:
             return "(not loaded)"
 
@@ -235,6 +220,63 @@ class AppState:
         n_cols = len(df.get_column_names())
         return f"({n_cols} columns, {df.row_count} rows)"
 
+    def get_file_names(self) -> list[str]:
+        """Get list of uploaded file names.
+
+        Returns:
+            List of file names in upload order
+        """
+        return list(self.uploaded_files.keys())
+
+    def remove_file(self, file_name: str) -> list[int]:
+        """Remove a file and its associated data.
+
+        Args:
+            file_name: Name of the file to remove
+
+        Returns:
+            List of series indices that were removed (for UI notification)
+        """
+        # Find series that depend on this file
+        removed_series_indices: list[int] = []
+        data_sources_to_remove = [ds for ds in self.data_sources if ds.file_name == file_name]
+
+        # Identify series to remove (those using data sources from this file)
+        for i, series in enumerate(self.series):
+            source_ds = (
+                self.data_sources[series.source_file_index]
+                if series.source_file_index < len(self.data_sources)
+                else None
+            )
+            if source_ds and source_ds.file_name == file_name:
+                removed_series_indices.append(i)
+
+        # Remove series (in reverse order to maintain indices)
+        for i in reversed(removed_series_indices):
+            self.series.pop(i)
+
+        # Update series source_file_index for remaining series
+        # First, identify which data_sources will be removed
+        removed_ds_indices = [self.data_sources.index(ds) for ds in data_sources_to_remove]
+
+        # Update source_file_index for remaining series
+        for series in self.series:
+            # Count how many removed indices are before this series' source
+            offset = sum(1 for idx in removed_ds_indices if idx < series.source_file_index)
+            series.source_file_index -= offset
+
+        # Remove data sources and parsed data
+        for ds in data_sources_to_remove:
+            if ds in self.parsed_data:
+                del self.parsed_data[ds]
+            self.data_sources.remove(ds)
+
+        # Remove uploaded file
+        if file_name in self.uploaded_files:
+            del self.uploaded_files[file_name]
+
+        return removed_series_indices
+
 
 def create_default_state() -> AppState:
     """Create a new AppState with default values.
@@ -251,4 +293,21 @@ def create_default_state() -> AppState:
     )
 
 
-__all__ = ["AppState", "DataSource", "create_default_state"]
+def get_state() -> AppState:
+    """Get or create the app state from Streamlit session state.
+
+    This function should be called at the start of each Streamlit rerun
+    to get the persistent application state.
+
+    Returns:
+        The AppState instance from session state
+    """
+    import streamlit as st
+
+    if "app_state" not in st.session_state:
+        st.session_state.app_state = create_default_state()
+    state: AppState = st.session_state.app_state
+    return state
+
+
+__all__ = ["AppState", "DataSource", "UploadedFile", "create_default_state", "get_state"]

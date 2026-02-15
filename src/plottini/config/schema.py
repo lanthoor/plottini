@@ -114,6 +114,18 @@ class PlotConfigSchema:
         figure_height: Figure height in inches
         show_grid: Whether to show grid lines
         show_legend: Whether to show legend
+        # Chart-type specific options
+        bar_width: Bar width for bar charts (0.1-1.0)
+        histogram_bins: Number of bins for histograms
+        histogram_density: Show density instead of counts
+        scatter_size: Marker size for scatter plots
+        area_alpha: Transparency for area charts (0.0-1.0)
+        pie_explode: Explode factor for pie charts (0.0-0.5)
+        pie_show_labels: Show labels on pie chart
+        box_show_outliers: Show outliers in box plots
+        violin_show_median: Show median line in violin plots
+        step_where: Step alignment ('pre', 'mid', 'post')
+        errorbar_capsize: Cap size for error bars
     """
 
     type: str = "line"
@@ -125,6 +137,18 @@ class PlotConfigSchema:
     figure_height: float = 6.0
     show_grid: bool = True
     show_legend: bool = True
+    # Chart-type specific options
+    bar_width: float = 0.8
+    histogram_bins: int = 20
+    histogram_density: bool = False
+    scatter_size: int = 50
+    area_alpha: float = 0.5
+    pie_explode: float = 0.0
+    pie_show_labels: bool = True
+    box_show_outliers: bool = True
+    violin_show_median: bool = True
+    step_where: str = "mid"
+    errorbar_capsize: int = 3
 
 
 @dataclass

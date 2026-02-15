@@ -105,6 +105,18 @@ class PlotConfig:
         figure_height: Figure height in inches
         show_grid: Whether to show grid lines
         show_legend: Whether to show legend
+        # Chart-type specific options
+        bar_width: Bar width for bar charts (0.1-1.0)
+        histogram_bins: Number of bins for histograms
+        histogram_density: Show density instead of counts
+        scatter_size: Marker size for scatter plots
+        area_alpha: Transparency for area charts (0.0-1.0)
+        pie_explode: Explode factor for pie charts (0.0-0.5)
+        pie_show_labels: Show labels on pie chart
+        box_show_outliers: Show outliers in box plots
+        violin_show_median: Show median line in violin plots
+        step_where: Step alignment ('pre', 'mid', 'post')
+        errorbar_capsize: Cap size for error bars
     """
 
     chart_type: ChartType = ChartType.LINE
@@ -116,6 +128,18 @@ class PlotConfig:
     figure_height: float = 6.0
     show_grid: bool = True
     show_legend: bool = True
+    # Chart-type specific options
+    bar_width: float = 0.8
+    histogram_bins: int = 20
+    histogram_density: bool = False
+    scatter_size: int = 50
+    area_alpha: float = 0.5
+    pie_explode: float = 0.0
+    pie_show_labels: bool = True
+    box_show_outliers: bool = True
+    violin_show_median: bool = True
+    step_where: str = "mid"
+    errorbar_capsize: int = 3
 
 
 class Plotter:
@@ -262,7 +286,7 @@ class Plotter:
 
         # Calculate bar width for grouped bars
         n_series = len(series)
-        bar_width = 0.8 / n_series
+        bar_width = self.config.bar_width / n_series
 
         for idx, s in enumerate(series):
             df = data[s.source_file_index]
@@ -317,7 +341,7 @@ class Plotter:
         values = df[s.y_column]
 
         # Convert labels to strings
-        labels_str = [str(label) for label in labels]
+        labels_str = [str(label) for label in labels] if self.config.pie_show_labels else None
 
         # Determine colors
         if s.color:
@@ -325,12 +349,16 @@ class Plotter:
         else:
             colors = [COLORBLIND_PALETTE[i % len(COLORBLIND_PALETTE)] for i in range(len(values))]
 
+        # Create explode array if needed
+        explode = [self.config.pie_explode] * len(values) if self.config.pie_explode > 0 else None
+
         ax.pie(
             values,
             labels=labels_str,
             colors=colors,
-            autopct="%1.1f%%",
+            autopct="%1.1f%%" if self.config.pie_show_labels else None,
             startangle=90,
+            explode=explode,
         )
 
     def _plot_scatter(
@@ -363,7 +391,7 @@ class Plotter:
                 label=s.label,
                 color=color,
                 marker=marker,
-                s=50,  # marker size
+                s=self.config.scatter_size,
             )
 
     def _plot_histogram(
@@ -387,11 +415,12 @@ class Plotter:
 
             ax.hist(
                 y_data,
-                bins="auto",
+                bins=self.config.histogram_bins,
                 label=s.label,
                 color=color,
                 alpha=0.7,
                 edgecolor="black",
+                density=self.config.histogram_density,
             )
 
     def _plot_polar(
@@ -445,7 +474,12 @@ class Plotter:
             box_data.append(np.array(y_data))
             labels.append(s.label if s.label else s.y_column)
 
-        bp = ax.boxplot(box_data, tick_labels=labels, patch_artist=True)
+        bp = ax.boxplot(
+            box_data,
+            tick_labels=labels,
+            patch_artist=True,
+            showfliers=self.config.box_show_outliers,
+        )
 
         # Apply colors
         for idx, patch in enumerate(bp["boxes"]):
@@ -478,7 +512,11 @@ class Plotter:
             violin_data.append(np.array(y_data))
             labels.append(s.label if s.label else s.y_column)
 
-        parts = ax.violinplot(violin_data, showmeans=True, showmedians=True)
+        parts = ax.violinplot(
+            violin_data,
+            showmeans=True,
+            showmedians=self.config.violin_show_median,
+        )
 
         # Apply colors - bodies is a list of PolyCollection objects
         bodies = parts["bodies"]
@@ -522,7 +560,7 @@ class Plotter:
                 y_data,
                 label=s.label,
                 color=color,
-                alpha=0.5,
+                alpha=self.config.area_alpha,
             )
             # Also plot the line on top
             target_ax.plot(x_data, y_data, color=color, linewidth=s.line_width)
@@ -562,6 +600,8 @@ class Plotter:
         ax2: Axes | None = None,
     ) -> None:
         """Plot step chart for discrete changes."""
+        from typing import Literal
+
         for idx, s in enumerate(series):
             df = data[s.source_file_index]
 
@@ -575,13 +615,18 @@ class Plotter:
             # Select target axis
             target_ax = ax2 if s.use_secondary_y and ax2 else ax
 
+            # Validate and cast step_where
+            step_where: Literal["pre", "post", "mid"] = "mid"
+            if self.config.step_where in ("pre", "post", "mid"):
+                step_where = self.config.step_where  # type: ignore[assignment]
+
             target_ax.step(
                 x_data,
                 y_data,
                 label=s.label,
                 color=color,
                 linewidth=s.line_width,
-                where="mid",
+                where=step_where,
             )
 
     def _plot_errorbar(
@@ -619,7 +664,7 @@ class Plotter:
                 marker=s.marker if s.marker else "o",
                 linestyle=s.line_style,
                 linewidth=s.line_width,
-                capsize=3,
+                capsize=self.config.errorbar_capsize,
             )
 
     def _plot_bar_horizontal(
@@ -645,7 +690,7 @@ class Plotter:
 
         # Calculate bar height for grouped bars
         n_series = len(series)
-        bar_height = 0.8 / n_series
+        bar_height = self.config.bar_width / n_series
 
         for idx, s in enumerate(series):
             df = data[s.source_file_index]

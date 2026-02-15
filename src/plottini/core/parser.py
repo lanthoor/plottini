@@ -10,11 +10,15 @@ import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import IO
 
 import numpy as np
 
 from plottini.core.dataframe import Column, DataFrame, create_empty_dataframe
 from plottini.utils.errors import ParseError
+
+# Type alias for file-like objects or paths
+FileSource = Path | str | IO[bytes]
 
 
 @dataclass
@@ -56,33 +60,44 @@ class TSVParser:
         """
         self.config = config or ParserConfig()
 
-    def parse(self, file_path: Path | str) -> DataFrame:
-        """Parse a TSV file into a DataFrame.
+    def parse(
+        self,
+        source: FileSource,
+        source_name: str | None = None,
+    ) -> DataFrame:
+        """Parse a TSV file or file-like object into a DataFrame.
 
         Args:
-            file_path: Path to the TSV file.
+            source: Path to the TSV file, or a file-like object (e.g., from st.file_uploader).
+            source_name: Optional name for the source (used when source is file-like).
 
         Returns:
             DataFrame containing the parsed data.
 
         Raises:
-            FileNotFoundError: If file does not exist.
+            FileNotFoundError: If file path does not exist.
             ParseError: If file contains invalid data.
         """
-        path = Path(file_path)
+        # Determine if source is a path or file-like object
+        if isinstance(source, (Path, str)):
+            path = Path(source)
+            if not path.exists():
+                raise FileNotFoundError(f"File not found: {path}")
+            lines = self._read_lines(path)
+            display_path = path
+        else:
+            # File-like object (e.g., from Streamlit uploader)
+            lines = self._read_lines_from_file_object(source)
+            display_path = Path(source_name) if source_name else Path("<uploaded>")
 
-        if not path.exists():
-            raise FileNotFoundError(f"File not found: {path}")
-
-        lines = self._read_lines(path)
         data_lines = self._filter_lines(lines)
 
         if not data_lines:
             warnings.warn(
-                f"File '{path}' is empty or contains only comments",
+                f"File '{display_path}' is empty or contains only comments",
                 stacklevel=2,
             )
-            return create_empty_dataframe(path)
+            return create_empty_dataframe(display_path)
 
         # Extract headers or generate column names
         if self.config.has_header:
@@ -94,7 +109,7 @@ class TSVParser:
             for col_idx, name in enumerate(column_names, start=1):
                 if name in seen:
                     raise ParseError(
-                        file_path=path,
+                        file_path=display_path,
                         line_number=header_line_num,
                         column=col_idx,
                         message=f"Duplicate column name '{name}' in header",
@@ -112,10 +127,10 @@ class TSVParser:
         if not data_lines:
             # File had header only, no data
             warnings.warn(
-                f"File '{path}' contains only a header row with no data",
+                f"File '{display_path}' contains only a header row with no data",
                 stacklevel=2,
             )
-            return create_empty_dataframe(path)
+            return create_empty_dataframe(display_path)
 
         # Parse data rows
         num_cols = len(column_names)
@@ -128,7 +143,7 @@ class TSVParser:
             # Validate column count
             if len(values) != num_cols:
                 raise ParseError(
-                    file_path=path,
+                    file_path=display_path,
                     line_number=line_num,
                     message=f"Inconsistent column count: expected {num_cols}, got {len(values)}",
                     context_line=line,
@@ -140,7 +155,7 @@ class TSVParser:
                     numeric_value = float(value)
                 except ValueError:
                     raise ParseError(
-                        file_path=path,
+                        file_path=display_path,
                         line_number=line_num,
                         column=col_idx + 1,
                         message="Invalid numeric value",
@@ -161,7 +176,7 @@ class TSVParser:
 
         return DataFrame(
             columns=columns,
-            source_file=path,
+            source_file=display_path,
             row_count=len(data_arrays[0]),
             _column_order=column_names,
         )
@@ -181,49 +196,60 @@ class TSVParser:
         """
         return [self.parse(path) for path in file_paths]
 
-    def parse_blocks(self, file_path: Path | str) -> list[DataFrame]:
-        """Parse a TSV file that may contain multiple data blocks.
+    def parse_blocks(
+        self,
+        source: FileSource,
+        source_name: str | None = None,
+    ) -> list[DataFrame]:
+        """Parse a TSV file or file-like object that may contain multiple data blocks.
 
         Data blocks are separated by comment lines or empty lines.
         Each block becomes a separate DataFrame.
 
         Args:
-            file_path: Path to the TSV file.
+            source: Path to the TSV file, or a file-like object (e.g., from st.file_uploader).
+            source_name: Optional name for the source (used when source is file-like).
 
         Returns:
             List of DataFrames, one per data block.
 
         Raises:
-            FileNotFoundError: If file does not exist.
+            FileNotFoundError: If file path does not exist.
             ParseError: If file contains invalid data.
         """
-        path = Path(file_path)
+        # Determine if source is a path or file-like object
+        if isinstance(source, (Path, str)):
+            path = Path(source)
+            if not path.exists():
+                raise FileNotFoundError(f"File not found: {path}")
+            lines = self._read_lines(path)
+            display_path = path
+        else:
+            # File-like object (e.g., from Streamlit uploader)
+            lines = self._read_lines_from_file_object(source)
+            display_path = Path(source_name) if source_name else Path("<uploaded>")
 
-        if not path.exists():
-            raise FileNotFoundError(f"File not found: {path}")
-
-        lines = self._read_lines(path)
         blocks = self._split_into_blocks(lines)
 
         if not blocks:
             warnings.warn(
-                f"File '{path}' is empty or contains only comments",
+                f"File '{display_path}' is empty or contains only comments",
                 stacklevel=2,
             )
-            return [create_empty_dataframe(path)]
+            return [create_empty_dataframe(display_path)]
 
         dataframes: list[DataFrame] = []
         for block_idx, block_lines in enumerate(blocks):
-            df = self._parse_block(path, block_lines, block_idx)
+            df = self._parse_block(display_path, block_lines, block_idx)
             if df.row_count > 0:
                 dataframes.append(df)
 
         if not dataframes:
             warnings.warn(
-                f"File '{path}' contains no valid data blocks",
+                f"File '{display_path}' contains no valid data blocks",
                 stacklevel=2,
             )
-            return [create_empty_dataframe(path)]
+            return [create_empty_dataframe(display_path)]
 
         return dataframes
 
@@ -374,6 +400,28 @@ class TSVParser:
         """Read all lines from file with proper encoding."""
         with open(path, encoding=self.config.encoding) as f:
             return f.readlines()
+
+    def _read_lines_from_file_object(self, file_obj: IO[bytes]) -> list[str]:
+        """Read all lines from a file-like object.
+
+        Args:
+            file_obj: File-like object with bytes content (e.g., from Streamlit uploader).
+
+        Returns:
+            List of lines as strings.
+        """
+        # Ensure we're at the start of the file
+        file_obj.seek(0)
+        content = file_obj.read()
+
+        # Decode bytes to string
+        if isinstance(content, bytes):
+            text = content.decode(self.config.encoding)
+        else:
+            text = content
+
+        # Split into lines, preserving line endings for consistency with readlines()
+        return text.splitlines(keepends=True)
 
     def _filter_lines(self, lines: list[str]) -> list[tuple[str, int]]:
         """Filter out comment and empty lines.
