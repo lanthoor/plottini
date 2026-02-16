@@ -4,30 +4,29 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  workflow_dispatch:  # Allow manual triggering
 
 permissions:
-  contents: read
+  contents: read  # Minimal default permissions
 
 jobs:
   build:
     name: Build distribution
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
-    
+
     - name: Install uv
       uses: astral-sh/setup-uv@f94ec6bedd8674c4426838e6b50417d36b6ab231  # v5.3.1
       with:
         enable-cache: true
-    
+
     - name: Set up Python
       run: uv python install 3.10
-    
+
     - name: Build package
       run: uv build
-    
+
     - name: Store the distribution packages
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
       with:
@@ -42,43 +41,62 @@ jobs:
       name: pypi
       url: https://pypi.org/p/plottini
     permissions:
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
-    
+      id-token: write  # Scoped to this job only for trusted publishing
+
     steps:
     - name: Download all the dists
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131  # v7.0.0
       with:
         name: python-package-distributions
         path: dist/
-    
+
     - name: Publish distribution to PyPI
       uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e  # v1.13.0
       with:
-        # Use trusted publishing (no token needed if configured in PyPI)
-        # If you want to use token: add PYPI_API_TOKEN to repository secrets
-        # password: ${{ secrets.PYPI_API_TOKEN }}
-        skip-existing: true
+        skip-existing: true  # Allow re-runs without failing on already-published versions
 
-  publish-to-testpypi:
-    name: Publish to TestPyPI
-    needs: build
+  create-github-release:
+    name: Create GitHub Release
+    needs: publish-to-pypi
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'  # Only on manual trigger
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/plottini
     permissions:
-      id-token: write
-    
+      contents: write  # Scoped to this job only for creating releases
+
     steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+    - name: Extract changelog for this version
+      id: changelog
+      run: |
+        VERSION=${GITHUB_REF_NAME#v}
+        # Escape dots in version for regex matching
+        VERSION_PATTERN=${VERSION//./\\.}
+        # Extract section for this version from CHANGELOG.md
+        # Gets content between ## [VERSION] and the next ## [
+        # Handles potential leading whitespace in the file
+        CHANGELOG=$(awk "/^[[:space:]]*## \\[${VERSION_PATTERN}\\]/{flag=1; next} /^[[:space:]]*## \\[/{flag=0} flag" CHANGELOG.md)
+        
+        # Check if changelog section was found
+        if [ -z "$CHANGELOG" ]; then
+          echo "Warning: No changelog section found for version ${VERSION}"
+          CHANGELOG="No changelog entry found for this version."
+        fi
+        
+        # Use delimiter for multiline output
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
     - name: Download all the dists
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131  # v7.0.0
       with:
         name: python-package-distributions
         path: dist/
-    
-    - name: Publish distribution to TestPyPI
-      uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e  # v1.13.0
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@c95fe3489396fe8a9eb87c0abf8aa5b2ef267fda  # v2.2.1
       with:
-        repository-url: https://test.pypi.org/legacy/
-        skip-existing: true
+        name: "Plottini ${{ github.ref_name }}"
+        body: ${{ steps.changelog.outputs.changelog }}
+        files: dist/*
+        generate_release_notes: false
