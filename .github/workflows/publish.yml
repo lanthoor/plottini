@@ -69,9 +69,12 @@ jobs:
       id: changelog
       run: |
         VERSION=${GITHUB_REF_NAME#v}
+        # Escape dots in version for regex matching
+        VERSION_PATTERN=${VERSION//./\\.}
         # Extract section for this version from CHANGELOG.md
         # Gets content between ## [VERSION] and the next ## [
-        CHANGELOG=$(awk "/^## \[${VERSION}\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+        # Handles potential leading whitespace in the file
+        CHANGELOG=$(awk "/^[[:space:]]*## \\[${VERSION_PATTERN}\\]/{flag=1; next} /^[[:space:]]*## \\[/{flag=0} flag" CHANGELOG.md)
         
         # Check if changelog section was found
         if [ -z "$CHANGELOG" ]; then

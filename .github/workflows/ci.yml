@@ -96,11 +96,19 @@ jobs:
         # Use PEP 440 compliant .dev suffix instead of hyphen
         NEW_VERSION="${CURRENT_VERSION}.dev${TIMESTAMP}"
         echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+        
         # Update all version files to keep them in sync
         sed -i "s/^version = .*/version = \"${NEW_VERSION}\"/" pyproject.toml
         sed -i "s/^__version__ = .*/__version__ = \"${NEW_VERSION}\"/" src/plottini/__init__.py
         sed -i "s/== \"${CURRENT_VERSION}\"/== \"${NEW_VERSION}\"/" tests/test_basic.py
-        sed -i "s/version ${CURRENT_VERSION}/version ${NEW_VERSION}/" tests/test_cli.py
+        sed -i -E "s/version[[:space:]]+${CURRENT_VERSION}/version ${NEW_VERSION}/" tests/test_cli.py
+        
+        # Verify all replacements succeeded
+        grep -q "version = \"${NEW_VERSION}\"" pyproject.toml || { echo "Failed to update pyproject.toml"; exit 1; }
+        grep -q "__version__ = \"${NEW_VERSION}\"" src/plottini/__init__.py || { echo "Failed to update __init__.py"; exit 1; }
+        grep -q "== \"${NEW_VERSION}\"" tests/test_basic.py || { echo "Failed to update test_basic.py"; exit 1; }
+        grep -q "version ${NEW_VERSION}" tests/test_cli.py || { echo "Failed to update test_cli.py"; exit 1; }
+        
         echo "Building version: ${NEW_VERSION}"
 
     - name: Build package

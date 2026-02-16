@@ -77,13 +77,27 @@ def validate_version(version: str) -> str:
 
 
 def calculate_new_version(current: str, bump_type: str) -> str:
-    """Calculate new version based on bump type."""
+    """Calculate new version based on bump type.
+
+    Note: This function expects a clean semantic version (X.Y.Z) without
+    dev/pre-release suffixes. The CI workflow temporarily modifies versions
+    with .dev suffixes for TestPyPI, but those changes are never committed.
+    This script should only be run on a clean working directory with the
+    base version in pyproject.toml.
+    """
     parts = current.split(".")
     if len(parts) != 3:
         print(f"Error: Invalid version format: {current}")
+        print("Expected X.Y.Z format (e.g., 0.6.0)")
+        print("Note: Dev versions (e.g., 0.6.0.dev123) are not supported.")
         sys.exit(1)
 
-    major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
+    try:
+        major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
+    except ValueError:
+        print(f"Error: Invalid version format: {current}")
+        print("Version components must be integers (X.Y.Z)")
+        sys.exit(1)
 
     if bump_type == "major":
         return f"{major + 1}.0.0"
@@ -222,7 +236,7 @@ def generate_changelog_section(version: str, commits: list[dict[str, str]]) -> s
     }
 
     for commit in commits:
-        commit_type, scope, is_breaking, full_message = parse_conventional_commit(commit["message"])
+        commit_type, scope, is_breaking, subject = parse_conventional_commit(commit["message"])
 
         # Determine category
         if is_breaking:
@@ -234,8 +248,8 @@ def generate_changelog_section(version: str, commits: list[dict[str, str]]) -> s
         else:
             category = "Other"
 
-        # Use full commit message as entry
-        sections[category].append(f"- {full_message}")
+        # Use commit subject line as changelog entry
+        sections[category].append(f"- {subject}")
 
     # Build changelog section
     lines = [f"## [{version}] - {today}", ""]
