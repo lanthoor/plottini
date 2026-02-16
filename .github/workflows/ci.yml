@@ -7,8 +7,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: read
-  id-token: write  # Required for trusted publishing to TestPyPI
+  contents: read  # Minimal default permissions
 
 jobs:
   test:
@@ -76,7 +75,7 @@ jobs:
       name: testpypi
       url: https://test.pypi.org/p/plottini
     permissions:
-      id-token: write
+      id-token: write  # Scoped to this job only for trusted publishing
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -94,9 +93,13 @@ jobs:
       run: |
         TIMESTAMP=$(date -u '+%Y%m%d%H%M%S')
         CURRENT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
-        NEW_VERSION="${CURRENT_VERSION}-${TIMESTAMP}"
+        # Use PEP 440 compliant .dev suffix instead of hyphen
+        NEW_VERSION="${CURRENT_VERSION}.dev${TIMESTAMP}"
         echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+        # Update pyproject.toml
         sed -i "s/^version = .*/version = \"${NEW_VERSION}\"/" pyproject.toml
+        # Update __init__.py to keep runtime version in sync
+        sed -i "s/^__version__ = .*/__version__ = \"${NEW_VERSION}\"/" src/plottini/__init__.py
         echo "Building version: ${NEW_VERSION}"
 
     - name: Build package

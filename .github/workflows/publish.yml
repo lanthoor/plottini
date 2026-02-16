@@ -6,8 +6,7 @@ on:
       - 'v*.*.*'
 
 permissions:
-  contents: write  # Need write for creating releases
-  id-token: write  # For trusted publishing
+  contents: read  # Minimal default permissions
 
 jobs:
   build:
@@ -42,7 +41,7 @@ jobs:
       name: pypi
       url: https://pypi.org/p/plottini
     permissions:
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
+      id-token: write  # Scoped to this job only for trusted publishing
 
     steps:
     - name: Download all the dists
@@ -53,13 +52,15 @@ jobs:
 
     - name: Publish distribution to PyPI
       uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e  # v1.13.0
+      with:
+        skip-existing: true  # Allow re-runs without failing on already-published versions
 
   create-github-release:
     name: Create GitHub Release
     needs: publish-to-pypi
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write  # Scoped to this job only for creating releases
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -71,6 +72,13 @@ jobs:
         # Extract section for this version from CHANGELOG.md
         # Gets content between ## [VERSION] and the next ## [
         CHANGELOG=$(awk "/^## \[${VERSION}\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+        
+        # Check if changelog section was found
+        if [ -z "$CHANGELOG" ]; then
+          echo "Warning: No changelog section found for version ${VERSION}"
+          CHANGELOG="No changelog entry found for this version."
+        fi
+        
         # Use delimiter for multiline output
         echo "changelog<<EOF" >> $GITHUB_OUTPUT
         echo "$CHANGELOG" >> $GITHUB_OUTPUT

@@ -25,28 +25,16 @@ from pathlib import Path
 
 # File paths relative to project root
 PROJECT_ROOT = Path(__file__).parent.parent
-VERSION_FILES = {
-    "pyproject.toml": r'^version = "([^"]+)"',
-    "src/plottini/__init__.py": r'^__version__ = "([^"]+)"',
-    "tests/test_basic.py": r'== "([^"]+)"',
-    "tests/test_cli.py": r"version ([0-9]+\.[0-9]+\.[0-9]+)",
-}
+VERSION_FILES = [
+    "pyproject.toml",
+    "src/plottini/__init__.py",
+    "tests/test_basic.py",
+    "tests/test_cli.py",
+]
 CHANGELOG_FILE = PROJECT_ROOT / "CHANGELOG.md"
 
-# Conventional commit type mappings to changelog categories
-# Categories: Breaking Changes, Features, Fixes, Other
-COMMIT_TYPES = {
-    "feat": "Features",
-    "fix": "Fixes",
-    "perf": "Other",
-    "refactor": "Other",
-    "docs": "Other",
-    "style": "Other",
-    "test": "Other",
-    "chore": "Other",
-    "ci": "Other",
-    "build": "Other",
-}
+# Semantic version pattern (X.Y.Z)
+VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 
 
 def run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -63,6 +51,29 @@ def get_current_version() -> str:
         print("Error: Could not find version in pyproject.toml")
         sys.exit(1)
     return match.group(1)
+
+
+def validate_version(version: str) -> str:
+    """Validate and normalize version string.
+
+    Args:
+        version: Version string to validate (e.g., "1.0.0" or "v1.0.0")
+
+    Returns:
+        Normalized version without leading 'v'
+
+    Raises:
+        SystemExit: If version format is invalid
+    """
+    # Strip leading 'v' if present
+    normalized = version.lstrip("v")
+
+    if not VERSION_PATTERN.match(normalized):
+        print(f"Error: Invalid version format: {version}")
+        print("Version must be in X.Y.Z format (e.g., 1.0.0)")
+        sys.exit(1)
+
+    return normalized
 
 
 def calculate_new_version(current: str, bump_type: str) -> str:
@@ -85,7 +96,7 @@ def calculate_new_version(current: str, bump_type: str) -> str:
         sys.exit(1)
 
 
-def update_version_file(filepath: Path, pattern: str, old_version: str, new_version: str) -> bool:
+def update_version_file(filepath: Path, old_version: str, new_version: str) -> bool:
     """Update version in a single file."""
     if not filepath.exists():
         print(f"  Warning: File not found: {filepath}")
@@ -120,50 +131,84 @@ def update_version_file(filepath: Path, pattern: str, old_version: str, new_vers
 def update_all_version_files(old_version: str, new_version: str) -> None:
     """Update version in all tracked files."""
     print("\nUpdating files...")
-    for filepath, pattern in VERSION_FILES.items():
+    for filepath in VERSION_FILES:
         full_path = PROJECT_ROOT / filepath
-        if update_version_file(full_path, pattern, old_version, new_version):
+        if update_version_file(full_path, old_version, new_version):
             print(f"  \u2713 {filepath}")
         else:
             print(f"  \u2717 {filepath} (no changes or not found)")
 
 
 def get_commits_since_tag(tag: str) -> list[dict[str, str]]:
-    """Get commits since the specified tag."""
+    """Get commits since the specified tag.
+
+    Uses full commit message (subject + body) to detect BREAKING CHANGE markers.
+    """
     try:
+        # Use %B for full message, %h for short SHA, with explicit separators
+        # %x1f is unit separator, %x1e is record separator
         result = run_command(
-            ["git", "log", f"{tag}..HEAD", "--pretty=format:%s|%h", "--no-merges"], check=False
+            [
+                "git",
+                "log",
+                f"{tag}..HEAD",
+                "--pretty=format:%B%x1f%h%x1e",
+                "--no-merges",
+            ],
+            check=False,
         )
         if result.returncode != 0:
-            # Tag might not exist, get all commits
+            # Tag might not exist, get recent commits
             result = run_command(
-                ["git", "log", "--pretty=format:%s|%h", "--no-merges"], check=False
+                [
+                    "git",
+                    "log",
+                    "-50",
+                    "--pretty=format:%B%x1f%h%x1e",
+                    "--no-merges",
+                ],
+                check=False,
             )
     except Exception:
         return []
 
-    commits = []
-    for line in result.stdout.strip().split("\n"):
-        if not line or "|" not in line:
+    commits: list[dict[str, str]] = []
+    output = result.stdout
+    if not output:
+        return commits
+
+    # Split by record separator (\x1e) to get each commit entry
+    for entry in output.strip().split("\x1e"):
+        if not entry.strip():
             continue
-        message, sha = line.rsplit("|", 1)
+        # Each entry is "full_message<US>sha" where <US> is \x1f
+        if "\x1f" not in entry:
+            continue
+        message, sha = entry.rsplit("\x1f", 1)
         commits.append({"message": message.strip(), "sha": sha.strip()})
     return commits
 
 
-def parse_conventional_commit(message: str) -> tuple[str | None, str | None, bool, str]:
+def parse_conventional_commit(full_message: str) -> tuple[str | None, str | None, bool, str]:
     """Parse a conventional commit message.
 
-    Returns: (type, scope, is_breaking, full_message)
+    Args:
+        full_message: Full commit message (subject + body)
+
+    Returns: (type, scope, is_breaking, subject_line)
     """
+    # Get subject line (first line of message)
+    subject = full_message.split("\n")[0].strip()
+
     # Pattern: type(scope)!: description or type!: description or type: description
     pattern = r"^(\w+)(?:\(([^)]+)\))?(!)?\s*:\s*(.+)$"
-    match = re.match(pattern, message)
+    match = re.match(pattern, subject)
     if match:
         commit_type, scope, breaking, description = match.groups()
-        is_breaking = breaking == "!" or "BREAKING CHANGE" in message
-        return commit_type, scope, is_breaking, message
-    return None, None, False, message
+        # Check for breaking change in subject (!) or body (BREAKING CHANGE:)
+        is_breaking = breaking == "!" or "BREAKING CHANGE" in full_message
+        return commit_type, scope, is_breaking, subject
+    return None, None, False, subject
 
 
 def generate_changelog_section(version: str, commits: list[dict[str, str]]) -> str:
@@ -250,7 +295,7 @@ def git_commit_and_tag(version: str) -> None:
     print("\nCommitting and tagging...")
 
     # Stage all version files and changelog
-    files_to_add = list(VERSION_FILES.keys()) + ["CHANGELOG.md"]
+    files_to_add = VERSION_FILES + ["CHANGELOG.md"]
     for filepath in files_to_add:
         full_path = PROJECT_ROOT / filepath
         if full_path.exists():
@@ -319,7 +364,7 @@ def main() -> None:
 
     # Calculate new version
     if args.explicit_version:
-        new_version = args.explicit_version
+        new_version = validate_version(args.explicit_version)
     else:
         new_version = calculate_new_version(current_version, args.bump_type)
 
