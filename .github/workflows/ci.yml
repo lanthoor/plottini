@@ -96,10 +96,11 @@ jobs:
         # Use PEP 440 compliant .dev suffix instead of hyphen
         NEW_VERSION="${CURRENT_VERSION}.dev${TIMESTAMP}"
         echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
-        # Update pyproject.toml
+        # Update all version files to keep them in sync
         sed -i "s/^version = .*/version = \"${NEW_VERSION}\"/" pyproject.toml
-        # Update __init__.py to keep runtime version in sync
         sed -i "s/^__version__ = .*/__version__ = \"${NEW_VERSION}\"/" src/plottini/__init__.py
+        sed -i "s/== \"${CURRENT_VERSION}\"/== \"${NEW_VERSION}\"/" tests/test_basic.py
+        sed -i "s/version ${CURRENT_VERSION}/version ${NEW_VERSION}/" tests/test_cli.py
         echo "Building version: ${NEW_VERSION}"
 
     - name: Build package
