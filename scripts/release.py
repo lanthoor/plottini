@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 """Release automation script for Plottini.
 
-This script automates the release process by:
-1. Bumping the version number based on semantic versioning
+This script automates the release process using Calendar Versioning (CalVer):
+1. Calculating the next CalVer version (YYYY.MM.MICRO)
 2. Updating all version files
 3. Generating changelog from conventional commits
 4. Committing, tagging, and pushing to origin
 
+CalVer Format: YYYY.MM.MICRO (PEP 440 compliant)
+- YYYY: Full year (e.g., 2026)
+- MM: Month (01-12, zero-padded)
+- MICRO: Release number within that month (0, 1, 2...)
+
 Usage:
-    python scripts/release.py patch    # 0.6.0 -> 0.6.1
-    python scripts/release.py minor    # 0.6.0 -> 0.7.0
-    python scripts/release.py major    # 0.6.0 -> 1.0.0
-    python scripts/release.py --version 1.0.0  # Set explicit version
+    python scripts/release.py              # Auto-calculate next version
+    python scripts/release.py --micro      # Force micro increment within same month
+    python scripts/release.py --version 2026.03.0  # Set explicit version
+    python scripts/release.py --dry-run    # Preview changes
 """
 
 from __future__ import annotations
@@ -33,8 +38,9 @@ VERSION_FILES = [
 ]
 CHANGELOG_FILE = PROJECT_ROOT / "CHANGELOG.md"
 
-# Semantic version pattern (X.Y.Z)
-VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+# CalVer pattern: YYYY.MM.MICRO (with optional .devN suffix)
+# Accepts 1-2 digit months to handle PEP 440 normalization (e.g., 2026.2.0 vs 2026.02.0)
+CALVER_PATTERN = re.compile(r"^(\d{4})\.(\d{1,2})\.(\d+)(?:\.dev\d+)?$")
 
 
 def run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -53,61 +59,96 @@ def get_current_version() -> str:
     return match.group(1)
 
 
-def validate_version(version: str) -> str:
-    """Validate and normalize version string.
+def strip_dev_suffix(version: str) -> str:
+    """Strip .devN suffix from version string."""
+    return re.sub(r"\.dev\d+$", "", version)
+
+
+def validate_calver(version: str) -> str:
+    """Validate and normalize CalVer version string.
 
     Args:
-        version: Version string to validate (e.g., "1.0.0" or "v1.0.0")
+        version: Version string to validate (e.g., "2026.02.0" or "2026.2.0")
 
     Returns:
-        Normalized version without leading 'v'
+        Normalized version with zero-padded month, without .dev suffix
 
     Raises:
         SystemExit: If version format is invalid
     """
-    # Strip leading 'v' if present
-    normalized = version.lstrip("v")
+    normalized = strip_dev_suffix(version)
 
-    if not VERSION_PATTERN.match(normalized):
-        print(f"Error: Invalid version format: {version}")
-        print("Version must be in X.Y.Z format (e.g., 1.0.0)")
+    match = CALVER_PATTERN.match(normalized)
+    if not match:
+        print(f"Error: Invalid CalVer format: {version}")
+        print("Version must be in YYYY.MM.MICRO format (e.g., 2026.02.0)")
         sys.exit(1)
 
-    return normalized
+    year_str, month_str, micro_str = match.groups()
+    month_int = int(month_str)
+    micro_int = int(micro_str)
+
+    if not (1 <= month_int <= 12):
+        print(f"Error: Invalid CalVer month: {version}")
+        print("Month component must be between 01 and 12.")
+        sys.exit(1)
+
+    # Return normalized version with zero-padded month
+    return f"{year_str}.{month_int:02d}.{micro_int}"
 
 
-def calculate_new_version(current: str, bump_type: str) -> str:
-    """Calculate new version based on bump type.
+def calculate_next_version(current: str, force_micro: bool = False) -> str:
+    """Calculate next CalVer version.
 
-    Note: This function expects a clean semantic version (X.Y.Z) without
-    dev/pre-release suffixes. The CI workflow temporarily modifies versions
-    with .dev suffixes for TestPyPI, but those changes are never committed.
-    This script should only be run on a clean working directory with the
-    base version in pyproject.toml.
+    Args:
+        current: Current version (may have .dev suffix)
+        force_micro: If True, increment micro within same year.month
+
+    Returns:
+        Next version in YYYY.MM.MICRO format
     """
-    parts = current.split(".")
-    if len(parts) != 3:
-        print(f"Error: Invalid version format: {current}")
-        print("Expected X.Y.Z format (e.g., 0.6.0)")
-        print("Note: Dev versions (e.g., 0.6.0.dev123) are not supported.")
-        sys.exit(1)
+    # Strip any .dev suffix from current version
+    base_version = strip_dev_suffix(current)
 
-    try:
-        major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
-    except ValueError:
-        print(f"Error: Invalid version format: {current}")
-        print("Version components must be integers (X.Y.Z)")
-        sys.exit(1)
+    # Parse current version
+    match = CALVER_PATTERN.match(base_version)
+    if not match:
+        # If current version isn't CalVer, start fresh with current date
+        now = datetime.now(timezone.utc)
+        return f"{now.year}.{now.month:02d}.0"
 
-    if bump_type == "major":
-        return f"{major + 1}.0.0"
-    elif bump_type == "minor":
-        return f"{major}.{minor + 1}.0"
-    elif bump_type == "patch":
-        return f"{major}.{minor}.{patch + 1}"
+    current_year = int(match.group(1))
+    current_month = int(match.group(2))
+    current_micro = int(match.group(3))
+
+    # Get current date
+    now = datetime.now(timezone.utc)
+    target_year = now.year
+    target_month = now.month
+
+    if force_micro or (target_year == current_year and target_month == current_month):
+        # Same year.month: increment micro
+        return f"{current_year}.{current_month:02d}.{current_micro + 1}"
     else:
-        print(f"Error: Invalid bump type: {bump_type}")
+        # New month: reset micro to 0
+        return f"{target_year}.{target_month:02d}.0"
+
+
+def calculate_dev_version(release_version: str) -> str:
+    """Calculate the dev version to set after a release.
+
+    After releasing 2026.02.0, set version to 2026.02.1.dev0
+    """
+    match = CALVER_PATTERN.match(release_version)
+    if not match:
+        print(f"Error: Invalid release version: {release_version}")
         sys.exit(1)
+
+    year = int(match.group(1))
+    month = int(match.group(2))
+    micro = int(match.group(3))
+
+    return f"{year}.{month:02d}.{micro + 1}.dev0"
 
 
 def update_version_file(filepath: Path, old_version: str, new_version: str) -> bool:
@@ -130,9 +171,19 @@ def update_version_file(filepath: Path, old_version: str, new_version: str) -> b
             flags=re.MULTILINE,
         )
     elif "test_basic.py" in str(filepath):
-        new_content = content.replace(f'== "{old_version}"', f'== "{new_version}"')
+        # Match any version format for replacement
+        new_content = re.sub(
+            r'__version__ == "[^"]+"',
+            f'__version__ == "{new_version}"',
+            content,
+        )
     elif "test_cli.py" in str(filepath):
-        new_content = content.replace(f"version {old_version}", f"version {new_version}")
+        # Match any version format for replacement
+        new_content = re.sub(
+            r"Plottini version [^\s]+",
+            f"Plottini version {new_version}",
+            content,
+        )
     else:
         return False
 
@@ -148,9 +199,9 @@ def update_all_version_files(old_version: str, new_version: str) -> None:
     for filepath in VERSION_FILES:
         full_path = PROJECT_ROOT / filepath
         if update_version_file(full_path, old_version, new_version):
-            print(f"  \u2713 {filepath}")
+            print(f"  ✓ {filepath}")
         else:
-            print(f"  \u2717 {filepath} (no changes or not found)")
+            print(f"  ✗ {filepath} (no changes or not found)")
 
 
 def get_commits_since_tag(tag: str) -> list[dict[str, str]]:
@@ -293,7 +344,7 @@ def update_changelog(version: str, commits: list[dict[str, str]]) -> None:
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and this project uses [Calendar Versioning](https://calver.org/) (YYYY.MM.MICRO).
 
 ## [Unreleased]
 
@@ -301,7 +352,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 """
 
     CHANGELOG_FILE.write_text(new_content)
-    print("  \u2713 CHANGELOG.md updated")
+    print("  ✓ CHANGELOG.md updated")
 
 
 def git_commit_and_tag(version: str) -> None:
@@ -317,11 +368,11 @@ def git_commit_and_tag(version: str) -> None:
 
     # Commit
     run_command(["git", "commit", "-m", f"chore(release): {version}"])
-    print(f"  \u2713 Committed: chore(release): {version}")
+    print(f"  ✓ Committed: chore(release): {version}")
 
     # Tag
     run_command(["git", "tag", "-a", f"v{version}", "-m", f"Release v{version}"])
-    print(f"  \u2713 Tagged: v{version}")
+    print(f"  ✓ Tagged: v{version}")
 
 
 def git_push() -> None:
@@ -333,14 +384,12 @@ def git_push() -> None:
     branch = result.stdout.strip()
 
     run_command(["git", "push", "origin", branch, "--tags"])
-    print(f"  \u2713 Pushed {branch} and tags")
+    print(f"  ✓ Pushed {branch} and tags")
 
 
 def get_last_tag() -> str | None:
     """Get the most recent version tag."""
-    result = run_command(
-        ["git", "describe", "--tags", "--abbrev=0", "--match", "v*.*.*"], check=False
-    )
+    result = run_command(["git", "describe", "--tags", "--abbrev=0", "--match", "v*"], check=False)
     if result.returncode == 0:
         return result.stdout.strip()
     return None
@@ -348,17 +397,18 @@ def get_last_tag() -> str | None:
 
 def main() -> None:
     """Main entry point."""
-    parser = argparse.ArgumentParser(description="Release automation for Plottini")
+    parser = argparse.ArgumentParser(
+        description="Release automation for Plottini using CalVer (YYYY.MM.MICRO)"
+    )
     parser.add_argument(
-        "bump_type",
-        nargs="?",
-        choices=["major", "minor", "patch"],
-        help="Version bump type",
+        "--micro",
+        action="store_true",
+        help="Force micro version increment within same month",
     )
     parser.add_argument(
         "--version",
         dest="explicit_version",
-        help="Set explicit version (e.g., 1.0.0)",
+        help="Set explicit version (e.g., 2026.03.0)",
     )
     parser.add_argument(
         "--dry-run",
@@ -368,21 +418,21 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if not args.bump_type and not args.explicit_version:
-        parser.print_help()
-        sys.exit(1)
-
     # Get current version
     current_version = get_current_version()
     print(f"Current version: {current_version}")
 
     # Calculate new version
     if args.explicit_version:
-        new_version = validate_version(args.explicit_version)
+        new_version = validate_calver(args.explicit_version)
     else:
-        new_version = calculate_new_version(current_version, args.bump_type)
+        new_version = calculate_next_version(current_version, force_micro=args.micro)
 
     print(f"New version: {new_version}")
+
+    # Calculate dev version for after release
+    dev_version = calculate_dev_version(new_version)
+    print(f"Post-release dev version: {dev_version}")
 
     if args.dry_run:
         print("\n[DRY RUN] Would perform the following actions:")
@@ -390,6 +440,9 @@ def main() -> None:
         print("  - Generate changelog from commits")
         print(f"  - Commit: chore(release): {new_version}")
         print(f"  - Tag: v{new_version}")
+        print("  - Push to origin")
+        print(f"  - Update version files to {dev_version}")
+        print(f"  - Commit: chore(release): bump to {dev_version}")
         print("  - Push to origin")
         sys.exit(0)
 
@@ -400,7 +453,7 @@ def main() -> None:
         print("Please commit or stash them before releasing.")
         sys.exit(1)
 
-    # Update version files
+    # Update version files to release version
     update_all_version_files(current_version, new_version)
 
     # Get commits since last tag and generate changelog
@@ -412,14 +465,34 @@ def main() -> None:
 
     update_changelog(new_version, commits)
 
-    # Commit and tag
+    # Commit and tag release
     git_commit_and_tag(new_version)
 
-    # Push
+    # Push release
     git_push()
 
-    print(f"\n\u2713 Released v{new_version}")
-    print("PyPI publish will be triggered automatically by the tag push.")
+    print(f"\n✓ Released v{new_version}")
+
+    # Now bump to dev version
+    print("\nBumping to development version...")
+    update_all_version_files(new_version, dev_version)
+
+    # Stage and commit dev version
+    for filepath in VERSION_FILES:
+        full_path = PROJECT_ROOT / filepath
+        if full_path.exists():
+            run_command(["git", "add", str(full_path)])
+
+    run_command(["git", "commit", "-m", f"chore(release): bump to {dev_version}"])
+    print(f"  ✓ Committed: chore(release): bump to {dev_version}")
+
+    # Push dev version commit
+    result = run_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    branch = result.stdout.strip()
+    run_command(["git", "push", "origin", branch])
+    print(f"  ✓ Pushed {branch}")
+
+    print("\nPyPI publish will be triggered automatically by the tag push.")
 
 
 if __name__ == "__main__":
