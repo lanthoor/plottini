@@ -39,7 +39,8 @@ VERSION_FILES = [
 CHANGELOG_FILE = PROJECT_ROOT / "CHANGELOG.md"
 
 # CalVer pattern: YYYY.MM.MICRO (with optional .devN suffix)
-CALVER_PATTERN = re.compile(r"^(\d{4})\.(\d{2})\.(\d+)(?:\.dev\d+)?$")
+# Accepts 1-2 digit months to handle PEP 440 normalization (e.g., 2026.2.0 vs 2026.02.0)
+CALVER_PATTERN = re.compile(r"^(\d{4})\.(\d{1,2})\.(\d+)(?:\.dev\d+)?$")
 
 
 def run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -67,22 +68,33 @@ def validate_calver(version: str) -> str:
     """Validate and normalize CalVer version string.
 
     Args:
-        version: Version string to validate (e.g., "2026.02.0")
+        version: Version string to validate (e.g., "2026.02.0" or "2026.2.0")
 
     Returns:
-        Normalized version without .dev suffix
+        Normalized version with zero-padded month, without .dev suffix
 
     Raises:
         SystemExit: If version format is invalid
     """
     normalized = strip_dev_suffix(version)
 
-    if not CALVER_PATTERN.match(normalized):
+    match = CALVER_PATTERN.match(normalized)
+    if not match:
         print(f"Error: Invalid CalVer format: {version}")
         print("Version must be in YYYY.MM.MICRO format (e.g., 2026.02.0)")
         sys.exit(1)
 
-    return normalized
+    year_str, month_str, micro_str = match.groups()
+    month_int = int(month_str)
+    micro_int = int(micro_str)
+
+    if not (1 <= month_int <= 12):
+        print(f"Error: Invalid CalVer month: {version}")
+        print("Month component must be between 01 and 12.")
+        sys.exit(1)
+
+    # Return normalized version with zero-padded month
+    return f"{year_str}.{month_int:02d}.{micro_int}"
 
 
 def calculate_next_version(current: str, force_micro: bool = False) -> str:
