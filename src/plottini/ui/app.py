@@ -15,6 +15,7 @@ from plottini.ui.components import (
     render_preview_column,
     render_series_tab,
     render_settings_tab,
+    render_transform_tab,
 )
 from plottini.ui.state import get_state
 
@@ -219,12 +220,15 @@ def main() -> None:
                     st.rerun()
 
         # UI5-style tabs
-        tab_data, tab_series, tab_settings, tab_export = st.tabs(
-            ["📁 Data", "📈 Series", "⚙️ Settings", "📥 Export"]
+        tab_data, tab_transform, tab_series, tab_settings, tab_export = st.tabs(
+            ["📁 Data", "🔧 Transform", "📈 Series", "⚙️ Settings", "📥 Export"]
         )
 
         with tab_data:
             render_data_tab(state)
+
+        with tab_transform:
+            render_transform_tab(state)
 
         with tab_series:
             render_series_tab(state)
