@@ -413,6 +413,12 @@ def branch_exists(branch_name: str) -> bool:
     return result.returncode == 0
 
 
+def remote_branch_exists(branch_name: str) -> bool:
+    """Check if a branch exists on remote origin."""
+    result = run_command(["git", "ls-remote", "--heads", "origin", branch_name], check=False)
+    return bool(result.stdout.strip())
+
+
 def tag_exists(tag_name: str) -> bool:
     """Check if a tag exists."""
     result = run_command(["git", "rev-parse", "--verify", f"refs/tags/{tag_name}"], check=False)
@@ -429,6 +435,21 @@ def verify_version_in_files(expected_version: str) -> None:
         print(f"Error: Version mismatch. Files have {current}, expected {expected_version}")
         print("Make sure you're on the correct commit and using the correct --version.")
         sys.exit(1)
+
+
+def verify_main_up_to_date() -> None:
+    """Verify local main is up to date with origin/main."""
+    print("\nFetching latest from origin...")
+    run_command(["git", "fetch", "origin"])
+
+    local_head = run_command(["git", "rev-parse", "HEAD"]).stdout.strip()
+    remote_head = run_command(["git", "rev-parse", "origin/main"]).stdout.strip()
+
+    if local_head != remote_head:
+        print("Error: Local 'main' is not up to date with 'origin/main'.")
+        print("Please run 'git pull --ff-only' and try again.")
+        sys.exit(1)
+    print("  ✓ Local main is up to date with origin/main")
 
 
 def prepare_release(version: str, current_version: str, dry_run: bool) -> None:
@@ -462,10 +483,15 @@ def prepare_release(version: str, current_version: str, dry_run: bool) -> None:
 
     verify_clean_working_directory()
 
-    # Check if branch already exists
-    if branch_exists(branch_name):
+    # Check if branch already exists (locally or on remote)
+    local_exists = branch_exists(branch_name)
+    remote_exists = remote_branch_exists(branch_name)
+    if local_exists or remote_exists:
         print(f"Error: Branch '{branch_name}' already exists.")
-        print("Delete it with: git branch -D " + branch_name)
+        if local_exists:
+            print(f"  Delete local branch: git branch -D {branch_name}")
+        if remote_exists:
+            print(f"  Delete remote branch: git push origin --delete {branch_name}")
         sys.exit(1)
 
     # Create and checkout release branch
@@ -551,6 +577,7 @@ def tag_release(version: str, dry_run: bool) -> None:
     if dry_run:
         print("\n[DRY RUN] Would perform the following actions:")
         print("  - Verify on main branch")
+        print("  - Verify local main is up to date with origin/main")
         print("  - Verify version in files matches target version")
         print(f"  - Create annotated tag: {tag_name}")
         print(f"  - Push tag: {tag_name}")
@@ -560,6 +587,9 @@ def tag_release(version: str, dry_run: bool) -> None:
     # Verify on main branch
     verify_on_main()
     print("  ✓ Verified on main branch")
+
+    # Verify local main is up to date
+    verify_main_up_to_date()
 
     # Verify version in files matches
     verify_version_in_files(version)
@@ -602,6 +632,7 @@ def post_release(version: str, dry_run: bool) -> None:
     if dry_run:
         print("\n[DRY RUN] Would perform the following actions:")
         print("  - Verify on main branch")
+        print("  - Verify local main is up to date with origin/main")
         print("  - Verify version in files matches release version")
         print(f"  - Update version files from {version} to {dev_version}")
         print(f"  - Commit: chore(release): bump to {dev_version} [skip ci]")
@@ -611,6 +642,9 @@ def post_release(version: str, dry_run: bool) -> None:
     # Verify on main branch
     verify_on_main()
     print("  ✓ Verified on main branch")
+
+    # Verify local main is up to date
+    verify_main_up_to_date()
 
     # Verify clean working directory
     verify_clean_working_directory()
@@ -708,11 +742,16 @@ With explicit version (recommended for --tag and --post-release):
     current_version = get_current_version()
     print(f"Current version: {current_version}")
 
-    # Calculate target version
+    # Calculate target version based on action
     if args.explicit_version:
         version = validate_calver(args.explicit_version)
-    else:
+    elif args.prepare:
+        # --prepare: calculate next version (date-based)
         version = calculate_next_version(current_version, force_micro=args.micro)
+    else:
+        # --tag and --post-release: default to current version in files (stripped of .dev)
+        version = strip_dev_suffix(current_version)
+        version = validate_calver(version)  # Normalize format
 
     print(f"Target version: {version}")
 
