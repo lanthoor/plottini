@@ -202,14 +202,9 @@ def main() -> None:
     # Get or create app state
     state = get_state()
 
-    # Store generate_figure in session state for use by on_change callbacks
-    # This ensures figure is regenerated immediately when any config changes
+    # Store generate_figure in session state for on-demand generation by export tab
     if "regenerate_figure" not in st.session_state:
         st.session_state.regenerate_figure = lambda: generate_figure(state)
-
-    # Generate figure on initial load
-    if state.current_figure is None and state.can_render():
-        generate_figure(state)
 
     # Main content with tabs
     col_main, col_preview = st.columns([7, 3])

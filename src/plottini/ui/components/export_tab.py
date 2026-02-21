@@ -16,6 +16,14 @@ import streamlit as st
 from plottini.ui.state import AppState
 
 
+def _ensure_figure(state: AppState) -> None:
+    """Ensure figure is generated if possible."""
+    if state.current_figure is None and state.can_render():
+        # Generate figure on-demand
+        if "regenerate_figure" in st.session_state:
+            st.session_state.regenerate_figure()
+
+
 def render_export_tab(state: AppState) -> None:
     """Render the Export tab content.
 
@@ -25,6 +33,9 @@ def render_export_tab(state: AppState) -> None:
     if not state.can_render():
         st.info("Configure data and series first to enable export.")
         return
+
+    # Ensure figure exists before rendering export options
+    _ensure_figure(state)
 
     # Export format
     format_options = ["PNG", "SVG", "PDF", "EPS"]
