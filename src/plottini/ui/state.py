@@ -131,8 +131,6 @@ class AppState:
 
     def clear_data(self) -> None:
         """Clear all loaded data and reset state."""
-        import streamlit as st
-
         self.uploaded_files.clear()
         self.data_sources.clear()
         self.parsed_data.clear()
@@ -146,9 +144,15 @@ class AppState:
         # Increment file uploader key to reset the widget
         # Streamlit file_uploader cannot be cleared by deleting its key,
         # so we use a counter-based key that changes on clear
-        if "file_uploader_key" not in st.session_state:
-            st.session_state.file_uploader_key = 0
-        st.session_state.file_uploader_key += 1
+        try:
+            import streamlit as st
+
+            if "file_uploader_key" not in st.session_state:
+                st.session_state.file_uploader_key = 0
+            st.session_state.file_uploader_key += 1
+        except Exception:
+            # st.session_state may not be available outside Streamlit runtime (e.g., tests)
+            pass
 
     def set_error(self, message: str) -> None:
         """Set error message.

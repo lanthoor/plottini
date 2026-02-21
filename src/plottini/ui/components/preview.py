@@ -34,14 +34,20 @@ def generate_figure(state: AppState) -> None:
         state.current_figure = None
         return
 
-    # Create plotter
-    plotter = Plotter(state.plot_config)
+    try:
+        # Create plotter
+        plotter = Plotter(state.plot_config)
 
-    # Create figure
-    fig = plotter.create_figure(dataframes, state.series)
+        # Create figure
+        fig = plotter.create_figure(dataframes, state.series)
 
-    # Store for export
-    state.current_figure = fig
+        # Store for export
+        state.current_figure = fig
+        state.clear_error()
+
+    except Exception as e:
+        state.current_figure = None
+        state.set_error(f"Failed to generate figure: {e}")
 
 
 def render_preview(state: AppState) -> None:

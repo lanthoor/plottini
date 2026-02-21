@@ -27,6 +27,9 @@ def _ensure_figure(state: AppState) -> None:
 def render_export_tab(state: AppState) -> None:
     """Render the Export tab content.
 
+    Export data is generated when the tab renders (not on every app rerun),
+    since Streamlit tabs only render their content when active.
+
     Args:
         state: Application state
     """

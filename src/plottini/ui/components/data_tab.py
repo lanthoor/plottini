@@ -155,6 +155,7 @@ def _render_parser_config(state: AppState) -> None:
     if new_config != state.parser_config:
         state.parser_config = new_config
         _reparse_all_files(state)
+        state.current_figure = None  # Invalidate figure to regenerate with new data
         st.rerun()
 
 

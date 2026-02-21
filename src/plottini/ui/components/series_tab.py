@@ -17,12 +17,6 @@ from plottini.core.plotter import COLORBLIND_PALETTE, SeriesConfig
 from plottini.ui.state import AppState
 
 
-def _on_series_change() -> None:
-    """Callback to regenerate figure when series config changes."""
-    if "regenerate_figure" in st.session_state:
-        st.session_state.regenerate_figure()
-
-
 def render_series_tab(state: AppState) -> None:
     """Render the Series tab content.
 
@@ -36,7 +30,6 @@ def render_series_tab(state: AppState) -> None:
     # Add series button
     if st.button("Add Series", type="primary"):
         _add_new_series(state)
-        _on_series_change()
         st.rerun()
 
     # Show existing series
@@ -82,7 +75,6 @@ def _render_series_config(state: AppState, index: int, series: SeriesConfig) -> 
         with col2:
             if st.button("Remove", key=f"remove_series_{index}", type="secondary"):
                 state.series.pop(index)
-                _on_series_change()
                 st.rerun()
 
         # Get available columns
@@ -101,7 +93,6 @@ def _render_series_config(state: AppState, index: int, series: SeriesConfig) -> 
                 format_func=lambda x: data_source_options[x],
                 index=current_source_idx,
                 key=f"source_{index}",
-                on_change=_on_series_change,
             )
             if source_idx != series.source_file_index:
                 series.source_file_index = source_idx
@@ -116,7 +107,6 @@ def _render_series_config(state: AppState, index: int, series: SeriesConfig) -> 
                 options=columns,
                 index=x_idx,
                 key=f"x_col_{index}",
-                on_change=_on_series_change,
             )
             if x_column != series.x_column:
                 series.x_column = x_column
@@ -128,7 +118,6 @@ def _render_series_config(state: AppState, index: int, series: SeriesConfig) -> 
                 options=columns,
                 index=y_idx,
                 key=f"y_col_{index}",
-                on_change=_on_series_change,
             )
             if y_column != series.y_column:
                 series.y_column = y_column
@@ -139,7 +128,6 @@ def _render_series_config(state: AppState, index: int, series: SeriesConfig) -> 
             value=series.label or "",
             key=f"label_{index}",
             help="Legend label for this series",
-            on_change=_on_series_change,
         )
         if label != series.label:
             series.label = label if label else None
@@ -152,7 +140,6 @@ def _render_series_config(state: AppState, index: int, series: SeriesConfig) -> 
                 "Color",
                 value=series.color or COLORBLIND_PALETTE[index % len(COLORBLIND_PALETTE)],
                 key=f"color_{index}",
-                on_change=_on_series_change,
             )
             if color != series.color:
                 series.color = color
@@ -172,7 +159,6 @@ def _render_series_config(state: AppState, index: int, series: SeriesConfig) -> 
                 options=list(line_styles.keys()),
                 index=list(line_styles.keys()).index(current_style),
                 key=f"line_style_{index}",
-                on_change=_on_series_change,
             )
             if line_styles[line_style] != series.line_style:
                 series.line_style = line_styles[line_style]
@@ -193,7 +179,6 @@ def _render_series_config(state: AppState, index: int, series: SeriesConfig) -> 
                 options=list(markers.keys()),
                 index=list(markers.keys()).index(current_marker),
                 key=f"marker_{index}",
-                on_change=_on_series_change,
             )
             if markers[marker] != series.marker:
                 series.marker = markers[marker]
@@ -206,7 +191,6 @@ def _render_series_config(state: AppState, index: int, series: SeriesConfig) -> 
             value=series.line_width,
             step=0.5,
             key=f"line_width_{index}",
-            on_change=_on_series_change,
         )
         if line_width != series.line_width:
             series.line_width = line_width
@@ -217,7 +201,6 @@ def _render_series_config(state: AppState, index: int, series: SeriesConfig) -> 
             value=series.use_secondary_y,
             key=f"secondary_y_{index}",
             help="Plot this series on the right y-axis",
-            on_change=_on_series_change,
         )
         if use_secondary != series.use_secondary_y:
             series.use_secondary_y = use_secondary
