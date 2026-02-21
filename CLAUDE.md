@@ -124,16 +124,16 @@ Follow this workflow for all changes:
 1. **Never disable or delete tests** - fix the code, not the tests
 2. **No feature creep** - only implement what's in PLAN.md
 3. **Safe expression evaluation** - use AST parsing with whitelist, never `eval()`
-4. **Update version in 4 places** when releasing: `src/plottini/__init__.py`, `pyproject.toml`, `tests/test_basic.py`, `tests/test_cli.py`
+4. **Update version in 5 places** when releasing: `src/plottini/__init__.py`, `pyproject.toml`, `tests/test_basic.py`, `tests/test_cli.py`, `uv.lock`
 
 ## Versioning
 
-This project uses **Calendar Versioning (CalVer)** with format `YYYY.MM.MICRO`:
+This project uses **Calendar Versioning (CalVer)** with PEP 440 compliant format `YYYY.M.MICRO`:
 - `YYYY` - Full year (e.g., 2026)
-- `MM` - Month (01-12, zero-padded)
+- `M` - Month (1-12, no zero-padding for PEP 440 compliance)
 - `MICRO` - Release number within that month (0, 1, 2...)
 
-**Examples**: `2026.02.0`, `2026.02.1`, `2026.03.0`
+**Examples**: `2026.2.0`, `2026.2.1`, `2026.3.0`
 
 **Release commands**:
 ```bash

@@ -7,6 +7,9 @@ and this project uses [Calendar Versioning](https://calver.org/) (YYYY.MM.MICRO)
 
 ## [Unreleased]
 
+## [2026.02.2] - 2026-02-21
+
+
 ## [2026.02.1] - 2026-02-21
 
 ### Features
