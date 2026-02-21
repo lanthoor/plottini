@@ -42,12 +42,17 @@ def render_data_tab(state: AppState) -> None:
 
 def _render_file_upload(state: AppState) -> None:
     """Render file upload widget."""
+    # Use a dynamic key that changes when clear_data() is called
+    # This is the standard way to reset a file_uploader in Streamlit
+    if "file_uploader_key" not in st.session_state:
+        st.session_state.file_uploader_key = 0
+
     uploaded_files = st.file_uploader(
         "Upload TSV files",
         type=["tsv", "txt", "dat"],
         accept_multiple_files=True,
         help="Upload one or more tab-separated value files",
-        key="file_uploader",
+        key=f"file_uploader_{st.session_state.file_uploader_key}",
     )
 
     if uploaded_files:
