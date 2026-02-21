@@ -140,34 +140,17 @@ def render_settings_tab(state: AppState) -> None:
             else options_list.index("upper right")
         )
 
-        # Use a container with limited width to make horizontal radio wrap into grid
-        with st.container():
-            st.markdown(
-                """<style>
-                div[data-testid="stRadio"] > div[role="radiogroup"] {
-                    max-width: 300px;
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 0;
-                }
-                div[data-testid="stRadio"] > div[role="radiogroup"] > label {
-                    width: 80px;
-                    padding: 4px 0;
-                }
-                </style>""",
-                unsafe_allow_html=True,
-            )
-            legend_loc = st.radio(
-                "Legend Position",
-                options=options_list,
-                index=current_idx,
-                format_func=lambda x: legend_options[x],
-                horizontal=True,
-                key="legend_position",
-                disabled=use_best,
-            )
-            if not use_best and legend_loc != config.legend_loc:
-                config.legend_loc = legend_loc
+        legend_loc = st.radio(
+            "Legend Position",
+            options=options_list,
+            index=current_idx,
+            format_func=lambda x: legend_options[x],
+            horizontal=True,
+            key="legend_position",
+            disabled=use_best,
+        )
+        if not use_best and legend_loc != config.legend_loc:
+            config.legend_loc = legend_loc
 
     # Chart-type specific options
     _render_chart_specific_options(config)

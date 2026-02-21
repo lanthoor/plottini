@@ -282,6 +282,23 @@ class TestLineChart:
         legend = ax.get_legend()
         assert legend is not None
 
+    def test_line_chart_legend_location(self, line_multi_df):
+        """Test legend location is applied correctly."""
+        config = PlotConfig(show_legend=True, legend_loc="upper left")
+        plotter = Plotter(config)
+        series = [
+            SeriesConfig(x_column="x", y_column="sine", label="Sine"),
+            SeriesConfig(x_column="x", y_column="cosine", label="Cosine"),
+        ]
+        fig = plotter.create_figure(line_multi_df, series)
+
+        ax = fig.axes[0]
+        legend = ax.get_legend()
+        assert legend is not None
+        # matplotlib stores location as a code or string
+        # "upper left" corresponds to location code 2
+        assert legend._loc == 2  # upper left
+
     def test_line_chart_legend_hidden(self, line_multi_df):
         """Test legend is hidden when disabled."""
         config = PlotConfig(show_legend=False)

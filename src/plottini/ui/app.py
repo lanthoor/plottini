@@ -167,6 +167,18 @@ def inject_custom_css() -> None:
         [data-baseweb="tooltip"] {
             font-size: 15px !important;
         }
+
+        /* Legend position radio button grid - target specific radio group */
+        div[data-testid="stRadio"] > div[role="radiogroup"][aria-label="Legend Position"] {
+            max-width: 300px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0;
+        }
+        div[data-testid="stRadio"] > div[role="radiogroup"][aria-label="Legend Position"] > label {
+            width: 80px;
+            padding: 4px 0;
+        }
         </style>
         """,
         unsafe_allow_html=True,
