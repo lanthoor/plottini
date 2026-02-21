@@ -22,8 +22,6 @@ def render_export_tab(state: AppState) -> None:
     Args:
         state: Application state
     """
-    st.header("Export")
-
     if not state.can_render():
         st.info("Configure data and series first to enable export.")
         return

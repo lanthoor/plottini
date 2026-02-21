@@ -179,6 +179,7 @@ def _dict_to_config(data: dict[str, Any], base_path: Path) -> GrapherConfig:
         figure_height=plot_data.get("figure_height", 6.0),
         show_grid=plot_data.get("show_grid", True),
         show_legend=plot_data.get("show_legend", True),
+        legend_loc=plot_data.get("legend_loc", "best"),
     )
 
     # Parse export config
@@ -291,6 +292,8 @@ def _config_to_dict(config: GrapherConfig) -> dict[str, Any]:
         plot_dict["show_grid"] = config.plot.show_grid
     if not config.plot.show_legend:
         plot_dict["show_legend"] = config.plot.show_legend
+    if config.plot.legend_loc != "best":
+        plot_dict["legend_loc"] = config.plot.legend_loc
     if plot_dict:
         result["plot"] = plot_dict
 

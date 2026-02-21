@@ -114,6 +114,7 @@ class PlotConfigSchema:
         figure_height: Figure height in inches
         show_grid: Whether to show grid lines
         show_legend: Whether to show legend
+        legend_loc: Legend location ('best', 'upper left', 'upper right', etc.)
         # Chart-type specific options
         bar_width: Bar width for bar charts (0.1-1.0)
         histogram_bins: Number of bins for histograms
@@ -137,6 +138,7 @@ class PlotConfigSchema:
     figure_height: float = 6.0
     show_grid: bool = True
     show_legend: bool = True
+    legend_loc: str = "best"
     # Chart-type specific options
     bar_width: float = 0.8
     histogram_bins: int = 20

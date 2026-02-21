@@ -307,6 +307,7 @@ def get_state() -> AppState:
     if "app_state" not in st.session_state:
         st.session_state.app_state = create_default_state()
     state: AppState = st.session_state.app_state
+
     return state
 
 

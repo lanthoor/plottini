@@ -35,7 +35,7 @@ def inject_custom_css() -> None:
 
         /* Main content padding - reset all Streamlit wrapper padding */
         .main .block-container {
-            padding-top: 1rem !important;
+            padding-top: 0 !important;
             padding-bottom: 1rem !important;
             max-width: 100%;
         }
@@ -166,6 +166,14 @@ def inject_custom_css() -> None:
         /* Help text / tooltips */
         [data-baseweb="tooltip"] {
             font-size: 15px !important;
+        }
+
+        /* Legend position radio button grid - uses horizontal layout */
+        div[data-testid="stRadio"]:has(input[aria-label^="↖"]) > div[role="radiogroup"],
+        div[data-testid="stRadio"]:has(input[aria-label^="↑"]) > div[role="radiogroup"] {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
         }
         </style>
         """,

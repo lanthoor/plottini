@@ -128,6 +128,13 @@ class TestAppState:
         assert state.plot_config.show_grid is True
         assert state.plot_config.show_legend is True
 
+    def test_default_state_has_legend_loc(self):
+        """Test default state includes legend_loc field."""
+        state = create_default_state()
+
+        assert hasattr(state.plot_config, "legend_loc")
+        assert state.plot_config.legend_loc == "best"
+
 
 class TestAppStateDataMethods:
     """Tests for data-related methods."""

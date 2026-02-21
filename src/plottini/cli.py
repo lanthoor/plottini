@@ -165,6 +165,7 @@ def render(config: str, output: str, fmt: str | None, dpi: int | None) -> None:
         figure_height=cfg.plot.figure_height,
         show_grid=cfg.plot.show_grid,
         show_legend=cfg.plot.show_legend,
+        legend_loc=cfg.plot.legend_loc,
     )
 
     # Create plotter and render
