@@ -23,8 +23,6 @@ def render_series_tab(state: AppState) -> None:
     Args:
         state: Application state
     """
-    st.header("Series")
-
     if not state.has_data():
         st.info("Upload data files in the Data tab first.")
         return
@@ -135,8 +133,6 @@ def _render_series_config(state: AppState, index: int, series: SeriesConfig) -> 
             series.label = label if label else None
 
         # Appearance settings
-        st.subheader("Appearance")
-
         col_color, col_style, col_marker = st.columns(3)
 
         with col_color:

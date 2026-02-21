@@ -307,6 +307,11 @@ def get_state() -> AppState:
     if "app_state" not in st.session_state:
         st.session_state.app_state = create_default_state()
     state: AppState = st.session_state.app_state
+
+    # Migrate old cached states: ensure legend_loc exists on plot_config
+    if not hasattr(state.plot_config, "legend_loc"):
+        state.plot_config.legend_loc = "best"
+
     return state
 
 

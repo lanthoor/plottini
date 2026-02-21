@@ -35,7 +35,7 @@ def inject_custom_css() -> None:
 
         /* Main content padding - reset all Streamlit wrapper padding */
         .main .block-container {
-            padding-top: 1rem !important;
+            padding-top: 0 !important;
             padding-bottom: 1rem !important;
             max-width: 100%;
         }

@@ -22,8 +22,6 @@ def render_settings_tab(state: AppState) -> None:
     Args:
         state: Application state
     """
-    st.header("Settings")
-
     config = state.plot_config
 
     # Chart type selection
@@ -52,8 +50,6 @@ def render_settings_tab(state: AppState) -> None:
         config.chart_type = chart_types[chart_type]
 
     # Labels section
-    st.subheader("Labels")
-
     title = st.text_input("Title", value=config.title)
     if title != config.title:
         config.title = title
@@ -77,7 +73,6 @@ def render_settings_tab(state: AppState) -> None:
             config.y2_label = y2_label
 
     # Figure dimensions
-    st.subheader("Figure Size")
     col_w, col_h = st.columns(2)
     with col_w:
         width = st.number_input(
@@ -102,7 +97,6 @@ def render_settings_tab(state: AppState) -> None:
             config.figure_height = height
 
     # Display options
-    st.subheader("Display Options")
     col_grid, col_legend = st.columns(2)
     with col_grid:
         show_grid = st.checkbox("Show Grid", value=config.show_grid)
@@ -114,6 +108,67 @@ def render_settings_tab(state: AppState) -> None:
         if show_legend != config.show_legend:
             config.show_legend = show_legend
 
+    # Legend position selector (only show when legend is enabled)
+    if config.show_legend:
+        # "Best" checkbox
+        use_best = st.checkbox(
+            "Auto position (best)",
+            value=config.legend_loc == "best",
+            help="Let matplotlib choose the best position",
+        )
+        if use_best:
+            if config.legend_loc != "best":
+                config.legend_loc = "best"
+
+        # 3x3 grid of legend positions (disabled when "best" is checked)
+        legend_options = {
+            "upper left": "↖",
+            "upper center": "↑",
+            "upper right": "↗",
+            "center left": "←",
+            "center": "●",
+            "center right": "→",
+            "lower left": "↙",
+            "lower center": "↓",
+            "lower right": "↘",
+        }
+        options_list = list(legend_options.keys())
+        # Default to "upper right" if currently "best"
+        current_idx = (
+            options_list.index(config.legend_loc)
+            if config.legend_loc in options_list
+            else options_list.index("upper right")
+        )
+
+        # Use a container with limited width to make horizontal radio wrap into grid
+        with st.container():
+            st.markdown(
+                """<style>
+                div[data-testid="stRadio"] > div[role="radiogroup"] {
+                    max-width: 300px;
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0;
+                }
+                div[data-testid="stRadio"] > div[role="radiogroup"] > label {
+                    width: 80px;
+                    padding: 4px 0;
+                }
+                </style>""",
+                unsafe_allow_html=True,
+            )
+            legend_loc = st.radio(
+                "Legend Position",
+                options=options_list,
+                index=current_idx,
+                format_func=lambda x: legend_options[x],
+                horizontal=True,
+                key="legend_position",
+                disabled=use_best,
+            )
+            if not use_best and legend_loc != config.legend_loc:
+                config.legend_loc = legend_loc
+
     # Chart-type specific options
     _render_chart_specific_options(config)
 
@@ -121,7 +176,6 @@ def render_settings_tab(state: AppState) -> None:
 def _render_chart_specific_options(config: PlotConfig) -> None:
     """Render options specific to the selected chart type."""
     if config.chart_type == ChartType.BAR or config.chart_type == ChartType.BAR_HORIZONTAL:
-        st.subheader("Bar Chart Options")
         bar_width = st.slider(
             "Bar Width",
             min_value=0.1,
@@ -133,7 +187,6 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
             config.bar_width = bar_width
 
     elif config.chart_type == ChartType.HISTOGRAM:
-        st.subheader("Histogram Options")
         col1, col2 = st.columns(2)
         with col1:
             bins = st.number_input(
@@ -151,7 +204,6 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
                 config.histogram_density = density
 
     elif config.chart_type == ChartType.SCATTER:
-        st.subheader("Scatter Plot Options")
         scatter_size = st.slider(
             "Marker Size",
             min_value=10,
@@ -163,7 +215,6 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
             config.scatter_size = scatter_size
 
     elif config.chart_type == ChartType.AREA:
-        st.subheader("Area Chart Options")
         alpha = st.slider(
             "Fill Transparency",
             min_value=0.1,
@@ -175,7 +226,6 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
             config.area_alpha = alpha
 
     elif config.chart_type == ChartType.PIE:
-        st.subheader("Pie Chart Options")
         col1, col2 = st.columns(2)
         with col1:
             explode = st.slider(
@@ -193,19 +243,16 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
                 config.pie_show_labels = show_labels
 
     elif config.chart_type == ChartType.BOX:
-        st.subheader("Box Plot Options")
         show_outliers = st.checkbox("Show Outliers", value=config.box_show_outliers)
         if show_outliers != config.box_show_outliers:
             config.box_show_outliers = show_outliers
 
     elif config.chart_type == ChartType.VIOLIN:
-        st.subheader("Violin Plot Options")
         show_median = st.checkbox("Show Median Line", value=config.violin_show_median)
         if show_median != config.violin_show_median:
             config.violin_show_median = show_median
 
     elif config.chart_type == ChartType.STEP:
-        st.subheader("Step Chart Options")
         step_options = ["pre", "mid", "post"]
         step_where = st.selectbox(
             "Step Position",

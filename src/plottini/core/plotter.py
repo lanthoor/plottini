@@ -105,6 +105,7 @@ class PlotConfig:
         figure_height: Figure height in inches
         show_grid: Whether to show grid lines
         show_legend: Whether to show legend
+        legend_loc: Legend location ('best', 'upper left', 'upper center', etc.)
         # Chart-type specific options
         bar_width: Bar width for bar charts (0.1-1.0)
         histogram_bins: Number of bins for histograms
@@ -128,6 +129,7 @@ class PlotConfig:
     figure_height: float = 6.0
     show_grid: bool = True
     show_legend: bool = True
+    legend_loc: str = "best"
     # Chart-type specific options
     bar_width: float = 0.8
     histogram_bins: int = 20
@@ -738,9 +740,9 @@ class Plotter:
                 lines1, labels1 = ax.get_legend_handles_labels()
                 lines2, labels2 = ax2.get_legend_handles_labels()
                 if labels1 or labels2:
-                    ax.legend(lines1 + lines2, labels1 + labels2)
+                    ax.legend(lines1 + lines2, labels1 + labels2, loc=self.config.legend_loc)
             elif ax.get_legend_handles_labels()[1]:
-                ax.legend()
+                ax.legend(loc=self.config.legend_loc)
 
 
 __all__ = [

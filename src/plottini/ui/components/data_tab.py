@@ -22,10 +22,7 @@ def render_data_tab(state: AppState) -> None:
     Args:
         state: Application state
     """
-    st.header("Data")
-
     # Parser configuration (shown first, not collapsible)
-    st.subheader("Parser Settings")
     _render_parser_config(state)
 
     st.divider()
@@ -35,7 +32,6 @@ def render_data_tab(state: AppState) -> None:
 
     # Show loaded files
     if state.uploaded_files:
-        st.subheader("Loaded Files")
         _render_loaded_files(state)
 
     # Alignment configuration (only show if multiple data sources)
