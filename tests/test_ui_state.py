@@ -136,31 +136,6 @@ class TestAppState:
         assert state.plot_config.legend_loc == "best"
 
 
-class TestAppStateMigration:
-    """Tests for state migration logic."""
-
-    def test_migrate_state_without_legend_loc(self):
-        """Test that get_state migrates old states missing legend_loc.
-
-        This tests the migration path in get_state() that adds legend_loc
-        to existing PlotConfig objects that were created before this field
-        was added.
-        """
-        from plottini.core.plotter import PlotConfig
-
-        # Create a PlotConfig and manually remove legend_loc to simulate old state
-        old_config = PlotConfig()
-        # Verify it has legend_loc by default (since it's in the dataclass)
-        assert hasattr(old_config, "legend_loc")
-
-        # Create state with this config
-        state = AppState()
-        state.plot_config = old_config
-
-        # The state should have legend_loc
-        assert state.plot_config.legend_loc == "best"
-
-
 class TestAppStateDataMethods:
     """Tests for data-related methods."""
 

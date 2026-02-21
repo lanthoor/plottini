@@ -122,15 +122,15 @@ def render_settings_tab(state: AppState) -> None:
 
         # 3x3 grid of legend positions (disabled when "best" is checked)
         legend_options = {
-            "upper left": "↖",
-            "upper center": "↑",
-            "upper right": "↗",
-            "center left": "←",
-            "center": "●",
-            "center right": "→",
-            "lower left": "↙",
-            "lower center": "↓",
-            "lower right": "↘",
+            "upper left": "↖ Upper Left",
+            "upper center": "↑ Upper",
+            "upper right": "↗ Upper Right",
+            "center left": "← Left",
+            "center": "● Center",
+            "center right": "→ Right",
+            "lower left": "↙ Lower Left",
+            "lower center": "↓ Lower",
+            "lower right": "↘ Lower Right",
         }
         options_list = list(legend_options.keys())
         # Default to "upper right" if currently "best"
