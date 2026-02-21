@@ -3,14 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project uses [Calendar Versioning](https://calver.org/) (YYYY.MM.MICRO).
+and this project uses [Calendar Versioning](https://calver.org/) (YYYY.M.MICRO).
 
 ## [Unreleased]
 
-## [2026.02.2] - 2026-02-21
-
-
-## [2026.02.1] - 2026-02-21
+## [2026.2.2] - 2026-02-21
 
 ### Features
 
@@ -23,20 +20,21 @@ and this project uses [Calendar Versioning](https://calver.org/) (YYYY.MM.MICRO)
 ### Other
 
 - refactor(cli): decouple release commit, tag, and dev bump (#16)
+- chore(release): 2026.02.1 (#18)
+- chore(release): 2026.2.2 (#19)
 
-
-## [2026.02.0] - 2026-02-20
+## [2026.2.0] - 2026-02-20
 
 ### Other
 
 - chore(versioning): migrate from SemVer to CalVer (YYYY.MM.MICRO)
 
-## [0.6.0] - 2026-02-15
+## [0.6.0] - 2026-02-16
 
 ### Other
 
-- chore(deps): bump pillow from 12.1.0 to 12.1.1 (#10)
 - refactor(ui): migrate from NiceGUI to Streamlit (#11)
+- chore(deps): bump pillow from 12.1.0 to 12.1.1 (#10)
 
 ## [0.5.0] - 2026-02-11
 
@@ -46,8 +44,8 @@ and this project uses [Calendar Versioning](https://calver.org/) (YYYY.MM.MICRO)
 
 ### Other
 
-- chore(deps): bump cryptography from 46.0.4 to 46.0.5 (#8)
 - Refactor CodeQL workflow configuration (#9)
+- chore(deps): bump cryptography from 46.0.4 to 46.0.5 (#8)
 
 ## [0.4.0] - 2026-02-10
 
@@ -67,21 +65,19 @@ and this project uses [Calendar Versioning](https://calver.org/) (YYYY.MM.MICRO)
 
 - fix(ci): update pypa/gh-action-pypi-publish SHA to correct commit (#4)
 
-## [0.3.0] - 2026-02-10
+## [0.3.0] - 2026-02-09
 
 ### Features
 
-- feat(plotter): implement all chart types for Phase 2 (#3)
 - feat: implement Phase 1 core foundation (parser, dataframe, exporter) (#1)
+- feat(plotter): implement all chart types for Phase 2 (#3)
 
 ### Other
 
 - ci: add explicit permissions to harden workflows (#2)
-- ci: configure dependabot updates
-- docs: update documentation structure
 
 ## [0.1.0] - 2026-02-09
 
 ### Features
 
-- feat: initial version
+- Initial release
