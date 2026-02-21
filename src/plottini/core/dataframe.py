@@ -152,6 +152,22 @@ class DataFrame:
         self.columns[name] = new_column
         self._column_order.append(name)
 
+    def remove_column(self, name: str) -> None:
+        """Remove a column from the DataFrame.
+
+        Args:
+            name: Name of the column to remove.
+
+        Raises:
+            KeyError: If column name does not exist.
+        """
+        if name not in self.columns:
+            available = ", ".join(f"'{n}'" for n in self._column_order)
+            raise KeyError(f"Column '{name}' not found. Available columns: {available}")
+
+        del self.columns[name]
+        self._column_order.remove(name)
+
     def filter_rows(
         self,
         column: str,

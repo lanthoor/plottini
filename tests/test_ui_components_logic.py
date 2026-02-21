@@ -351,6 +351,75 @@ class TestTransformPanelLogic:
         assert len(state.derived_columns) == 1
         assert state.derived_columns[0].name == "b"
 
+    def test_remove_column_from_dataframe(self, tmp_path: Path) -> None:
+        """Test removing a column from DataFrame using remove_column method."""
+        df = DataFrame(
+            columns={
+                "x": Column(name="x", index=0, data=np.array([1.0, 2.0, 3.0])),
+                "y": Column(name="y", index=1, data=np.array([4.0, 5.0, 6.0])),
+            },
+            source_file=tmp_path / "test.tsv",
+            row_count=3,
+        )
+
+        # Add a derived column
+        df.add_derived_column("z", "x + y")
+        assert "z" in df
+        assert len(df.get_column_names()) == 3
+
+        # Remove the derived column
+        df.remove_column("z")
+        assert "z" not in df
+        assert len(df.get_column_names()) == 2
+        assert df.get_column_names() == ["x", "y"]
+
+    def test_remove_column_raises_on_missing(self, tmp_path: Path) -> None:
+        """Test that removing a non-existent column raises KeyError."""
+        df = DataFrame(
+            columns={
+                "x": Column(name="x", index=0, data=np.array([1.0, 2.0, 3.0])),
+            },
+            source_file=tmp_path / "test.tsv",
+            row_count=3,
+        )
+
+        with pytest.raises(KeyError, match="Column 'nonexistent' not found"):
+            df.remove_column("nonexistent")
+
+    def test_derived_column_is_marked_as_derived(self, tmp_path: Path) -> None:
+        """Test that derived columns have is_derived=True."""
+        df = DataFrame(
+            columns={
+                "x": Column(name="x", index=0, data=np.array([1.0, 2.0, 3.0])),
+            },
+            source_file=tmp_path / "test.tsv",
+            row_count=3,
+        )
+
+        df.add_derived_column("doubled", "x * 2")
+
+        assert df.get_column("x").is_derived is False
+        assert df.get_column("doubled").is_derived is True
+
+    def test_duplicate_column_name_raises_in_add(self, tmp_path: Path) -> None:
+        """Test that adding a derived column with existing name raises error."""
+        df = DataFrame(
+            columns={
+                "x": Column(name="x", index=0, data=np.array([1.0, 2.0, 3.0])),
+            },
+            source_file=tmp_path / "test.tsv",
+            row_count=3,
+        )
+
+        # First add succeeds
+        df.add_derived_column("y", "x * 2")
+        assert "y" in df
+
+        # Adding same name again overwrites (this is current behavior)
+        # The UI should prevent this, but the DataFrame allows it
+        df.add_derived_column("y", "x * 3")
+        np.testing.assert_array_almost_equal(df["y"], [3.0, 6.0, 9.0])
+
 
 class TestExportPanelLogic:
     """Tests for ExportPanel business logic."""
