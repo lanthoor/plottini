@@ -2,10 +2,9 @@
 """Release automation script for Plottini.
 
 This script automates the release process using Calendar Versioning (CalVer):
-1. Calculating the next CalVer version (YYYY.MM.MICRO)
-2. Updating all version files
-3. Generating changelog from conventional commits
-4. Committing, tagging, and pushing to origin
+1. --prepare: Create a release PR with version updates and changelog
+2. --tag: Tag the release on main after PR is merged
+3. --post-release: Bump to dev version after tagging
 
 CalVer Format: YYYY.MM.MICRO (PEP 440 compliant)
 - YYYY: Full year (e.g., 2026)
@@ -13,10 +12,23 @@ CalVer Format: YYYY.MM.MICRO (PEP 440 compliant)
 - MICRO: Release number within that month (0, 1, 2...)
 
 Usage:
-    python scripts/release.py              # Auto-calculate next version
-    python scripts/release.py --micro      # Force micro increment within same month
-    python scripts/release.py --version 2026.03.0  # Set explicit version
-    python scripts/release.py --dry-run    # Preview changes
+    # Step 1: Create release PR (from main)
+    python scripts/release.py --prepare
+
+    # Step 2: After PR is merged, tag the release (on main)
+    git checkout main && git pull
+    python scripts/release.py --tag
+
+    # Step 3: Bump to dev version (on main)
+    python scripts/release.py --post-release
+
+    # With explicit version:
+    python scripts/release.py --prepare --version 2026.02.0
+    python scripts/release.py --tag --version 2026.02.0
+    python scripts/release.py --post-release --version 2026.02.0
+
+    # Preview changes:
+    python scripts/release.py --prepare --dry-run
 """
 
 from __future__ import annotations
@@ -355,38 +367,6 @@ and this project uses [Calendar Versioning](https://calver.org/) (YYYY.MM.MICRO)
     print("  ✓ CHANGELOG.md updated")
 
 
-def git_commit_and_tag(version: str) -> None:
-    """Commit changes and create tag."""
-    print("\nCommitting and tagging...")
-
-    # Stage all version files and changelog
-    files_to_add = VERSION_FILES + ["CHANGELOG.md"]
-    for filepath in files_to_add:
-        full_path = PROJECT_ROOT / filepath
-        if full_path.exists():
-            run_command(["git", "add", str(full_path)])
-
-    # Commit
-    run_command(["git", "commit", "-m", f"chore(release): {version}"])
-    print(f"  ✓ Committed: chore(release): {version}")
-
-    # Tag
-    run_command(["git", "tag", "-a", f"v{version}", "-m", f"Release v{version}"])
-    print(f"  ✓ Tagged: v{version}")
-
-
-def git_push() -> None:
-    """Push commit and tags to origin."""
-    print("\nPushing to origin...")
-
-    # Get current branch
-    result = run_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-    branch = result.stdout.strip()
-
-    run_command(["git", "push", "origin", branch, "--tags"])
-    print(f"  ✓ Pushed {branch} and tags")
-
-
 def get_last_tag() -> str | None:
     """Get the most recent version tag."""
     result = run_command(["git", "describe", "--tags", "--abbrev=0", "--match", "v*"], check=False)
@@ -395,15 +375,344 @@ def get_last_tag() -> str | None:
     return None
 
 
+def get_current_branch() -> str:
+    """Get the current git branch name."""
+    result = run_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    return result.stdout.strip()
+
+
+def verify_on_main() -> None:
+    """Verify we're on the main branch, exit if not."""
+    branch = get_current_branch()
+    if branch != "main":
+        print(f"Error: Must be on main branch to perform this action (currently on '{branch}')")
+        sys.exit(1)
+
+
+def verify_clean_working_directory() -> None:
+    """Verify working directory has no uncommitted changes."""
+    result = run_command(["git", "status", "--porcelain"], check=False)
+    if result.stdout.strip():
+        print("\nError: Working directory has uncommitted changes.")
+        print("Please commit or stash them before releasing.")
+        sys.exit(1)
+
+
+def verify_gh_cli_available() -> None:
+    """Verify GitHub CLI (gh) is installed and authenticated."""
+    result = run_command(["gh", "auth", "status"], check=False)
+    if result.returncode != 0:
+        print("Error: GitHub CLI (gh) is not installed or not authenticated.")
+        print("Install it from https://cli.github.com/ and run 'gh auth login'")
+        sys.exit(1)
+
+
+def branch_exists(branch_name: str) -> bool:
+    """Check if a local branch exists."""
+    result = run_command(["git", "rev-parse", "--verify", branch_name], check=False)
+    return result.returncode == 0
+
+
+def remote_branch_exists(branch_name: str) -> bool:
+    """Check if a branch exists on remote origin."""
+    result = run_command(["git", "ls-remote", "--heads", "origin", branch_name], check=False)
+    return bool(result.stdout.strip())
+
+
+def tag_exists(tag_name: str) -> bool:
+    """Check if a tag exists."""
+    result = run_command(["git", "rev-parse", "--verify", f"refs/tags/{tag_name}"], check=False)
+    return result.returncode == 0
+
+
+def verify_version_in_files(expected_version: str) -> None:
+    """Verify the version in pyproject.toml matches the expected version."""
+    current = get_current_version()
+    # Normalize both versions for comparison (strip dev suffix)
+    current_normalized = strip_dev_suffix(current)
+    expected_normalized = strip_dev_suffix(expected_version)
+    if current_normalized != expected_normalized:
+        print(f"Error: Version mismatch. Files have {current}, expected {expected_version}")
+        print("Make sure you're on the correct commit and using the correct --version.")
+        sys.exit(1)
+
+
+def verify_main_up_to_date() -> None:
+    """Verify local main is up to date with origin/main."""
+    print("\nFetching latest from origin...")
+    run_command(["git", "fetch", "origin"])
+
+    local_head = run_command(["git", "rev-parse", "HEAD"]).stdout.strip()
+    remote_head = run_command(["git", "rev-parse", "origin/main"]).stdout.strip()
+
+    if local_head != remote_head:
+        print("Error: Local 'main' is not up to date with 'origin/main'.")
+        print("Please run 'git pull --ff-only' and try again.")
+        sys.exit(1)
+    print("  ✓ Local main is up to date with origin/main")
+
+
+def prepare_release(version: str, current_version: str, dry_run: bool) -> None:
+    """Create a release branch with version updates and changelog, then create a PR.
+
+    Args:
+        version: The release version to prepare
+        current_version: The current version in files
+        dry_run: If True, only show what would be done
+    """
+    branch_name = f"release/{version}"
+
+    if dry_run:
+        print("\n[DRY RUN] Would perform the following actions:")
+        print("  - Verify on main branch")
+        print("  - Verify GitHub CLI is available")
+        print(f"  - Create and checkout branch: {branch_name}")
+        print(f"  - Update version files from {current_version} to {version}")
+        print("  - Generate changelog from commits")
+        print(f"  - Commit: chore(release): {version}")
+        print(f"  - Push branch: {branch_name}")
+        print(f"  - Create PR to main with title: chore(release): {version}")
+        return
+
+    # Verify prerequisites
+    verify_on_main()
+    print("  ✓ Verified on main branch")
+
+    verify_gh_cli_available()
+    print("  ✓ GitHub CLI is available")
+
+    verify_clean_working_directory()
+
+    # Check if branch already exists (locally or on remote)
+    local_exists = branch_exists(branch_name)
+    remote_exists = remote_branch_exists(branch_name)
+    if local_exists or remote_exists:
+        print(f"Error: Branch '{branch_name}' already exists.")
+        if local_exists:
+            print(f"  Delete local branch: git branch -D {branch_name}")
+        if remote_exists:
+            print(f"  Delete remote branch: git push origin --delete {branch_name}")
+        sys.exit(1)
+
+    # Create and checkout release branch
+    print(f"\nCreating branch: {branch_name}")
+    run_command(["git", "checkout", "-b", branch_name])
+    print(f"  ✓ Created and checked out branch: {branch_name}")
+
+    # Update version files
+    update_all_version_files(current_version, version)
+
+    # Get commits since last tag and generate changelog
+    last_tag = get_last_tag()
+    if last_tag:
+        commits = get_commits_since_tag(last_tag)
+    else:
+        commits = get_commits_since_tag("HEAD~50")  # Fallback: last 50 commits
+
+    update_changelog(version, commits)
+
+    # Stage and commit
+    print("\nCommitting changes...")
+    files_to_add = VERSION_FILES + ["CHANGELOG.md"]
+    for filepath in files_to_add:
+        full_path = PROJECT_ROOT / filepath
+        if full_path.exists():
+            run_command(["git", "add", str(full_path)])
+
+    run_command(["git", "commit", "-m", f"chore(release): {version}"])
+    print(f"  ✓ Committed: chore(release): {version}")
+
+    # Push branch
+    print("\nPushing branch...")
+    run_command(["git", "push", "-u", "origin", branch_name])
+    print(f"  ✓ Pushed branch: {branch_name}")
+
+    # Create PR
+    print("\nCreating pull request...")
+    pr_body = f"""## Release {version}
+
+This PR prepares the release of version {version}.
+
+### Changes
+- Updated version in all tracked files
+- Generated changelog from commits since last release
+
+### After merging
+1. Checkout main and pull: `git checkout main && git pull`
+2. Tag the release: `python scripts/release.py --tag --version {version}`
+3. Bump to dev version: `python scripts/release.py --post-release --version {version}`
+"""
+    run_command(
+        [
+            "gh",
+            "pr",
+            "create",
+            "--title",
+            f"chore(release): {version}",
+            "--body",
+            pr_body,
+            "--base",
+            "main",
+        ]
+    )
+    print(f"  ✓ Created PR for release {version}")
+
+    print(f"\n✓ Release PR prepared for v{version}")
+    print("\nNext steps:")
+    print("  1. Review and merge the PR")
+    print("  2. After merge: git checkout main && git pull")
+    print(f"  3. Tag release: python scripts/release.py --tag --version {version}")
+    print(f"  4. Bump to dev: python scripts/release.py --post-release --version {version}")
+
+
+def tag_release(version: str, dry_run: bool) -> None:
+    """Create and push the release tag on main.
+
+    Args:
+        version: The release version to tag
+        dry_run: If True, only show what would be done
+    """
+    tag_name = f"v{version}"
+
+    if dry_run:
+        print("\n[DRY RUN] Would perform the following actions:")
+        print("  - Verify on main branch")
+        print("  - Verify local main is up to date with origin/main")
+        print("  - Verify version in files matches target version")
+        print(f"  - Create annotated tag: {tag_name}")
+        print(f"  - Push tag: {tag_name}")
+        print("  - This will trigger the PyPI publish workflow")
+        return
+
+    # Verify on main branch
+    verify_on_main()
+    print("  ✓ Verified on main branch")
+
+    # Verify local main is up to date
+    verify_main_up_to_date()
+
+    # Verify version in files matches
+    verify_version_in_files(version)
+    print(f"  ✓ Version in files matches {version}")
+
+    # Check if tag already exists
+    if tag_exists(tag_name):
+        print(f"Error: Tag '{tag_name}' already exists.")
+        print("If you need to re-tag, delete it first with:")
+        print(f"  git tag -d {tag_name} && git push origin :refs/tags/{tag_name}")
+        sys.exit(1)
+
+    # Create annotated tag
+    print(f"\nCreating tag: {tag_name}")
+    run_command(["git", "tag", "-a", tag_name, "-m", f"Release {tag_name}"])
+    print(f"  ✓ Created tag: {tag_name}")
+
+    # Push tag
+    print("\nPushing tag...")
+    run_command(["git", "push", "origin", tag_name])
+    print(f"  ✓ Pushed tag: {tag_name}")
+
+    print(f"\n✓ Tagged release {tag_name}")
+    print("\nPyPI publish will be triggered automatically by the tag push.")
+    print(f"\nNext step: python scripts/release.py --post-release --version {version}")
+
+
+def post_release(version: str, dry_run: bool) -> None:
+    """Bump to dev version after a release.
+
+    Note: This commits directly to main, bypassing PR review. This is intentional
+    for the dev version bump as it's a routine post-release step.
+
+    Args:
+        version: The release version that was just tagged
+        dry_run: If True, only show what would be done
+    """
+    dev_version = calculate_dev_version(version)
+
+    if dry_run:
+        print("\n[DRY RUN] Would perform the following actions:")
+        print("  - Verify on main branch")
+        print("  - Verify local main is up to date with origin/main")
+        print("  - Verify version in files matches release version")
+        print(f"  - Update version files from {version} to {dev_version}")
+        print(f"  - Commit: chore(release): bump to {dev_version} [skip ci]")
+        print("  - Push to main (direct push, no PR)")
+        return
+
+    # Verify on main branch
+    verify_on_main()
+    print("  ✓ Verified on main branch")
+
+    # Verify local main is up to date
+    verify_main_up_to_date()
+
+    # Verify clean working directory
+    verify_clean_working_directory()
+
+    # Verify version in files matches the release version
+    verify_version_in_files(version)
+    print(f"  ✓ Version in files matches {version}")
+
+    # Update version files to dev version
+    update_all_version_files(version, dev_version)
+
+    # Stage and commit with [skip ci]
+    print("\nCommitting dev version bump...")
+    for filepath in VERSION_FILES:
+        full_path = PROJECT_ROOT / filepath
+        if full_path.exists():
+            run_command(["git", "add", str(full_path)])
+
+    run_command(["git", "commit", "-m", f"chore(release): bump to {dev_version} [skip ci]"])
+    print(f"  ✓ Committed: chore(release): bump to {dev_version} [skip ci]")
+
+    # Push to main
+    print("\nPushing to main...")
+    run_command(["git", "push", "origin", "main"])
+    print("  ✓ Pushed to main")
+
+    print(f"\n✓ Bumped to development version {dev_version}")
+
+
 def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Release automation for Plottini using CalVer (YYYY.MM.MICRO)"
+        description="Release automation for Plottini using CalVer (YYYY.MM.MICRO)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Steps for a release (version auto-calculated from date):
+  1. python scripts/release.py --prepare               # Create release PR
+  2. (merge the PR on GitHub)
+  3. git checkout main && git pull
+  4. python scripts/release.py --tag                   # Tag the release
+  5. python scripts/release.py --post-release         # Bump to dev version
+
+With explicit version (recommended for --tag and --post-release):
+  python scripts/release.py --prepare --version 2026.02.0
+  python scripts/release.py --tag --version 2026.02.0
+  python scripts/release.py --post-release --version 2026.02.0
+""",
+    )
+    parser.add_argument(
+        "--prepare",
+        action="store_true",
+        help="Create release branch, commit version updates, and create PR to main",
+    )
+    parser.add_argument(
+        "--tag",
+        action="store_true",
+        help="Tag the release on main (run after PR is merged)",
+    )
+    parser.add_argument(
+        "--post-release",
+        action="store_true",
+        help="Bump to dev version after tagging (commits directly to main)",
     )
     parser.add_argument(
         "--micro",
         action="store_true",
-        help="Force micro version increment within same month",
+        help="Force micro version increment within same month (only affects --prepare; "
+        "use --version for --tag and --post-release)",
     )
     parser.add_argument(
         "--version",
@@ -418,81 +727,41 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    # Ensure exactly one action is specified
+    actions = [args.prepare, args.tag, args.post_release]
+    if sum(actions) == 0:
+        print("Error: Must specify one of --prepare, --tag, or --post-release")
+        print("\nUse --help for usage information.")
+        sys.exit(1)
+    if sum(actions) > 1:
+        print("Error: Cannot combine --prepare, --tag, and --post-release")
+        print("Run each step separately in order.")
+        sys.exit(1)
+
     # Get current version
     current_version = get_current_version()
     print(f"Current version: {current_version}")
 
-    # Calculate new version
+    # Calculate target version based on action
     if args.explicit_version:
-        new_version = validate_calver(args.explicit_version)
+        version = validate_calver(args.explicit_version)
+    elif args.prepare:
+        # --prepare: calculate next version (date-based)
+        version = calculate_next_version(current_version, force_micro=args.micro)
     else:
-        new_version = calculate_next_version(current_version, force_micro=args.micro)
+        # --tag and --post-release: default to current version in files (stripped of .dev)
+        version = strip_dev_suffix(current_version)
+        version = validate_calver(version)  # Normalize format
 
-    print(f"New version: {new_version}")
+    print(f"Target version: {version}")
 
-    # Calculate dev version for after release
-    dev_version = calculate_dev_version(new_version)
-    print(f"Post-release dev version: {dev_version}")
-
-    if args.dry_run:
-        print("\n[DRY RUN] Would perform the following actions:")
-        print(f"  - Update version files from {current_version} to {new_version}")
-        print("  - Generate changelog from commits")
-        print(f"  - Commit: chore(release): {new_version}")
-        print(f"  - Tag: v{new_version}")
-        print("  - Push to origin")
-        print(f"  - Update version files to {dev_version}")
-        print(f"  - Commit: chore(release): bump to {dev_version}")
-        print("  - Push to origin")
-        sys.exit(0)
-
-    # Check for uncommitted changes
-    result = run_command(["git", "status", "--porcelain"], check=False)
-    if result.stdout.strip():
-        print("\nError: Working directory has uncommitted changes.")
-        print("Please commit or stash them before releasing.")
-        sys.exit(1)
-
-    # Update version files to release version
-    update_all_version_files(current_version, new_version)
-
-    # Get commits since last tag and generate changelog
-    last_tag = get_last_tag()
-    if last_tag:
-        commits = get_commits_since_tag(last_tag)
-    else:
-        commits = get_commits_since_tag("HEAD~50")  # Fallback: last 50 commits
-
-    update_changelog(new_version, commits)
-
-    # Commit and tag release
-    git_commit_and_tag(new_version)
-
-    # Push release
-    git_push()
-
-    print(f"\n✓ Released v{new_version}")
-
-    # Now bump to dev version
-    print("\nBumping to development version...")
-    update_all_version_files(new_version, dev_version)
-
-    # Stage and commit dev version
-    for filepath in VERSION_FILES:
-        full_path = PROJECT_ROOT / filepath
-        if full_path.exists():
-            run_command(["git", "add", str(full_path)])
-
-    run_command(["git", "commit", "-m", f"chore(release): bump to {dev_version}"])
-    print(f"  ✓ Committed: chore(release): bump to {dev_version}")
-
-    # Push dev version commit
-    result = run_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-    branch = result.stdout.strip()
-    run_command(["git", "push", "origin", branch])
-    print(f"  ✓ Pushed {branch}")
-
-    print("\nPyPI publish will be triggered automatically by the tag push.")
+    # Dispatch to appropriate action
+    if args.prepare:
+        prepare_release(version, current_version, args.dry_run)
+    elif args.tag:
+        tag_release(version, args.dry_run)
+    elif args.post_release:
+        post_release(version, args.dry_run)
 
 
 if __name__ == "__main__":
