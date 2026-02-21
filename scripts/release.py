@@ -398,6 +398,39 @@ def verify_clean_working_directory() -> None:
         sys.exit(1)
 
 
+def verify_gh_cli_available() -> None:
+    """Verify GitHub CLI (gh) is installed and authenticated."""
+    result = run_command(["gh", "auth", "status"], check=False)
+    if result.returncode != 0:
+        print("Error: GitHub CLI (gh) is not installed or not authenticated.")
+        print("Install it from https://cli.github.com/ and run 'gh auth login'")
+        sys.exit(1)
+
+
+def branch_exists(branch_name: str) -> bool:
+    """Check if a local branch exists."""
+    result = run_command(["git", "rev-parse", "--verify", branch_name], check=False)
+    return result.returncode == 0
+
+
+def tag_exists(tag_name: str) -> bool:
+    """Check if a tag exists."""
+    result = run_command(["git", "rev-parse", "--verify", f"refs/tags/{tag_name}"], check=False)
+    return result.returncode == 0
+
+
+def verify_version_in_files(expected_version: str) -> None:
+    """Verify the version in pyproject.toml matches the expected version."""
+    current = get_current_version()
+    # Normalize both versions for comparison (strip dev suffix)
+    current_normalized = strip_dev_suffix(current)
+    expected_normalized = strip_dev_suffix(expected_version)
+    if current_normalized != expected_normalized:
+        print(f"Error: Version mismatch. Files have {current}, expected {expected_version}")
+        print("Make sure you're on the correct commit and using the correct --version.")
+        sys.exit(1)
+
+
 def prepare_release(version: str, current_version: str, dry_run: bool) -> None:
     """Create a release branch with version updates and changelog, then create a PR.
 
@@ -410,6 +443,8 @@ def prepare_release(version: str, current_version: str, dry_run: bool) -> None:
 
     if dry_run:
         print("\n[DRY RUN] Would perform the following actions:")
+        print("  - Verify on main branch")
+        print("  - Verify GitHub CLI is available")
         print(f"  - Create and checkout branch: {branch_name}")
         print(f"  - Update version files from {current_version} to {version}")
         print("  - Generate changelog from commits")
@@ -418,8 +453,20 @@ def prepare_release(version: str, current_version: str, dry_run: bool) -> None:
         print(f"  - Create PR to main with title: chore(release): {version}")
         return
 
-    # Verify clean working directory
+    # Verify prerequisites
+    verify_on_main()
+    print("  ✓ Verified on main branch")
+
+    verify_gh_cli_available()
+    print("  ✓ GitHub CLI is available")
+
     verify_clean_working_directory()
+
+    # Check if branch already exists
+    if branch_exists(branch_name):
+        print(f"Error: Branch '{branch_name}' already exists.")
+        print("Delete it with: git branch -D " + branch_name)
+        sys.exit(1)
 
     # Create and checkout release branch
     print(f"\nCreating branch: {branch_name}")
@@ -504,6 +551,7 @@ def tag_release(version: str, dry_run: bool) -> None:
     if dry_run:
         print("\n[DRY RUN] Would perform the following actions:")
         print("  - Verify on main branch")
+        print("  - Verify version in files matches target version")
         print(f"  - Create annotated tag: {tag_name}")
         print(f"  - Push tag: {tag_name}")
         print("  - This will trigger the PyPI publish workflow")
@@ -512,6 +560,17 @@ def tag_release(version: str, dry_run: bool) -> None:
     # Verify on main branch
     verify_on_main()
     print("  ✓ Verified on main branch")
+
+    # Verify version in files matches
+    verify_version_in_files(version)
+    print(f"  ✓ Version in files matches {version}")
+
+    # Check if tag already exists
+    if tag_exists(tag_name):
+        print(f"Error: Tag '{tag_name}' already exists.")
+        print("If you need to re-tag, delete it first with:")
+        print(f"  git tag -d {tag_name} && git push origin :refs/tags/{tag_name}")
+        sys.exit(1)
 
     # Create annotated tag
     print(f"\nCreating tag: {tag_name}")
@@ -531,6 +590,9 @@ def tag_release(version: str, dry_run: bool) -> None:
 def post_release(version: str, dry_run: bool) -> None:
     """Bump to dev version after a release.
 
+    Note: This commits directly to main, bypassing PR review. This is intentional
+    for the dev version bump as it's a routine post-release step.
+
     Args:
         version: The release version that was just tagged
         dry_run: If True, only show what would be done
@@ -540,9 +602,10 @@ def post_release(version: str, dry_run: bool) -> None:
     if dry_run:
         print("\n[DRY RUN] Would perform the following actions:")
         print("  - Verify on main branch")
+        print("  - Verify version in files matches release version")
         print(f"  - Update version files from {version} to {dev_version}")
         print(f"  - Commit: chore(release): bump to {dev_version} [skip ci]")
-        print("  - Push to main")
+        print("  - Push to main (direct push, no PR)")
         return
 
     # Verify on main branch
@@ -551,6 +614,10 @@ def post_release(version: str, dry_run: bool) -> None:
 
     # Verify clean working directory
     verify_clean_working_directory()
+
+    # Verify version in files matches the release version
+    verify_version_in_files(version)
+    print(f"  ✓ Version in files matches {version}")
 
     # Update version files to dev version
     update_all_version_files(version, dev_version)
@@ -579,12 +646,17 @@ def main() -> None:
         description="Release automation for Plottini using CalVer (YYYY.MM.MICRO)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Steps for a release:
-  1. python scripts/release.py --prepare              # Create release PR
+Steps for a release (version auto-calculated from date):
+  1. python scripts/release.py --prepare               # Create release PR
   2. (merge the PR on GitHub)
   3. git checkout main && git pull
-  4. python scripts/release.py --tag                  # Tag the release
-  5. python scripts/release.py --post-release        # Bump to dev version
+  4. python scripts/release.py --tag                   # Tag the release
+  5. python scripts/release.py --post-release         # Bump to dev version
+
+With explicit version (recommended for --tag and --post-release):
+  python scripts/release.py --prepare --version 2026.02.0
+  python scripts/release.py --tag --version 2026.02.0
+  python scripts/release.py --post-release --version 2026.02.0
 """,
     )
     parser.add_argument(
