@@ -39,7 +39,7 @@ def render_transform_tab(state: AppState) -> None:
 
     # Help section
     with st.expander("Expression Help", expanded=False):
-        _render_expression_help(state)
+        _render_expression_help()
 
 
 def _render_derived_columns_list(state: AppState) -> None:
@@ -91,14 +91,12 @@ def _delete_derived_column(state: AppState, ds: DataSource, col_name: str) -> No
 
     df = state.parsed_data[ds]
     if col_name in df.columns:
-        # Remove from columns dict
-        del df.columns[col_name]
-        # Remove from column order
-        if col_name in df._column_order:
-            df._column_order.remove(col_name)
+        df.remove_column(col_name)
 
-    # Also remove from derived_columns config list if present
-    state.derived_columns = [dc for dc in state.derived_columns if dc.name != col_name]
+    # NOTE: We intentionally do not modify state.derived_columns here.
+    # DerivedColumnConfig does not track which data source a derived column
+    # belongs to, so removing entries by name alone could accidentally delete
+    # configurations for the same-named column in other data sources.
 
     # Invalidate current figure
     state.current_figure = None
@@ -200,12 +198,8 @@ def _add_derived_column(
         st.error(f"Error adding column: {e}")
 
 
-def _render_expression_help(state: AppState) -> None:
-    """Render help text for expressions.
-
-    Args:
-        state: Application state
-    """
+def _render_expression_help() -> None:
+    """Render help text for expressions."""
     st.markdown("**Available Functions:**")
     func_list = ", ".join(f"`{name}`" for name in sorted(ALLOWED_FUNCTIONS.keys()))
     st.write(func_list)
