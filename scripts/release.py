@@ -605,7 +605,8 @@ Steps for a release:
     parser.add_argument(
         "--micro",
         action="store_true",
-        help="Force micro version increment within same month",
+        help="Force micro version increment within same month (only affects --prepare; "
+        "use --version for --tag and --post-release)",
     )
     parser.add_argument(
         "--version",
