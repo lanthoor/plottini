@@ -200,7 +200,7 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
     elif config.chart_type == ChartType.AREA:
         alpha = st.slider(
             "Fill Transparency",
-            min_value=0.1,
+            min_value=0.0,
             max_value=1.0,
             value=config.area_alpha,
             step=0.1,

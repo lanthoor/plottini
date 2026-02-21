@@ -31,7 +31,7 @@ def render_preview(state: AppState) -> None:
 
             # Display the figure
             if state.current_figure is not None:
-                st.pyplot(state.current_figure, use_container_width=True)
+                st.pyplot(state.current_figure, width="stretch")
             else:
                 st.warning("Unable to generate preview.")
 
@@ -75,15 +75,11 @@ def render_preview_column(state: AppState) -> None:
         st.info("Upload data and configure at least one series.")
         return
 
-    # Add refresh button
-    if st.button("Refresh Preview", key="refresh_preview"):
-        pass  # Just triggers rerun
-
     try:
         _generate_preview(state)
 
         if state.current_figure is not None:
-            st.pyplot(state.current_figure, use_container_width=True)
+            st.pyplot(state.current_figure, width="stretch")
 
             # Show figure info
             with st.expander("Figure Info", expanded=False):

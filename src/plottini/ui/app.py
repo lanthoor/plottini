@@ -34,8 +34,9 @@ def inject_custom_css() -> None:
         }
 
         /* Main content padding - reset all Streamlit wrapper padding */
-        .main .block-container {
-            padding-top: 0 !important;
+        .main .block-container,
+        div[data-testid="stMainBlockContainer"] {
+            padding-top: 1rem !important;
             padding-bottom: 1rem !important;
             max-width: 100%;
         }
@@ -208,7 +209,7 @@ def main() -> None:
         if state.has_data():
             _, col_btn = st.columns([8, 2])
             with col_btn:
-                if st.button("Clear All", type="secondary", use_container_width=True):
+                if st.button("Clear All", type="secondary", width="stretch"):
                     state.clear_data()
                     st.rerun()
 

@@ -39,10 +39,10 @@ def render_export_tab(state: AppState) -> None:
     if export_format == "PNG":
         dpi = st.slider(
             "Resolution (DPI)",
-            min_value=72,
+            min_value=50,
             max_value=600,
             value=300,
-            step=72,
+            step=10,
             help="300 DPI recommended for print, 150 for web",
         )
     else:
@@ -69,22 +69,40 @@ def render_export_tab(state: AppState) -> None:
     # Export button
     st.divider()
 
-    if st.button("Generate Export", type="primary"):
-        _generate_export(state, export_format.lower(), dpi, full_filename)
+    # Generate export data and offer direct download
+    export_data = _generate_export_data(state, export_format.lower(), dpi)
+    if export_data is not None:
+        mime_types = {
+            "png": "image/png",
+            "svg": "image/svg+xml",
+            "pdf": "application/pdf",
+            "eps": "application/postscript",
+        }
+        mime_type = mime_types.get(export_format.lower(), "application/octet-stream")
+
+        st.download_button(
+            label=f"Download {full_filename}",
+            data=export_data,
+            file_name=full_filename,
+            mime=mime_type,
+            type="primary",
+        )
 
 
-def _generate_export(state: AppState, format_str: str, dpi: int, filename: str) -> None:
-    """Generate and offer the plot export for download.
+def _generate_export_data(state: AppState, format_str: str, dpi: int) -> bytes | None:
+    """Generate the plot export data.
 
     Args:
         state: Application state
         format_str: Export format (png, svg, pdf, eps)
         dpi: Resolution in DPI
-        filename: Output filename
+
+    Returns:
+        Export data as bytes, or None if export fails
     """
     if state.current_figure is None:
         st.error("No figure to export. Please ensure the preview is generated.")
-        return
+        return None
 
     try:
         # Export to buffer directly using matplotlib
@@ -98,28 +116,11 @@ def _generate_export(state: AppState, format_str: str, dpi: int, filename: str) 
             edgecolor="none",
         )
         buffer.seek(0)
-
-        # Determine MIME type
-        mime_types = {
-            "png": "image/png",
-            "svg": "image/svg+xml",
-            "pdf": "application/pdf",
-            "eps": "application/postscript",
-        }
-        mime_type = mime_types.get(format_str, "application/octet-stream")
-
-        # Offer download
-        st.download_button(
-            label=f"Download {filename}",
-            data=buffer,
-            file_name=filename,
-            mime=mime_type,
-        )
-
-        st.success("Export ready! Click above to download.")
+        return buffer.getvalue()
 
     except Exception as e:
         st.error(f"Export failed: {e}")
+        return None
 
 
 def render_config_export(state: AppState) -> None:
