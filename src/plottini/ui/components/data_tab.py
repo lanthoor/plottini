@@ -47,6 +47,7 @@ def _render_file_upload(state: AppState) -> None:
         type=["tsv", "txt", "dat"],
         accept_multiple_files=True,
         help="Upload one or more tab-separated value files",
+        key="file_uploader",
     )
 
     if uploaded_files:

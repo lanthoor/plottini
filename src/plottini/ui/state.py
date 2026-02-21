@@ -131,6 +131,8 @@ class AppState:
 
     def clear_data(self) -> None:
         """Clear all loaded data and reset state."""
+        import streamlit as st
+
         self.uploaded_files.clear()
         self.data_sources.clear()
         self.parsed_data.clear()
@@ -140,6 +142,10 @@ class AppState:
         self.series.clear()
         self.current_figure = None
         self.error_message = None
+
+        # Clear the file uploader widget state
+        if "file_uploader" in st.session_state:
+            del st.session_state["file_uploader"]
 
     def set_error(self, message: str) -> None:
         """Set error message.
