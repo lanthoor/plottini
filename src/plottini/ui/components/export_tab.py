@@ -69,7 +69,12 @@ def render_export_tab(state: AppState) -> None:
     # Export button
     st.divider()
 
-    # Generate export data and offer direct download
+    # Check if figure is available
+    if state.current_figure is None:
+        st.warning("No figure available. Configure data and series first.")
+        return
+
+    # Generate export data for download button
     export_data = _generate_export_data(state, export_format.lower(), dpi)
     if export_data is not None:
         mime_types = {
@@ -89,7 +94,7 @@ def render_export_tab(state: AppState) -> None:
         )
 
 
-def _generate_export_data(state: AppState, format_str: str, dpi: int) -> bytes | None:
+def _generate_export_data(state: AppState, format_str: str, dpi: int) -> BytesIO | None:
     """Generate the plot export data.
 
     Args:
@@ -98,10 +103,9 @@ def _generate_export_data(state: AppState, format_str: str, dpi: int) -> bytes |
         dpi: Resolution in DPI
 
     Returns:
-        Export data as bytes, or None if export fails
+        Export data as BytesIO buffer, or None if export fails
     """
     if state.current_figure is None:
-        st.error("No figure to export. Please ensure the preview is generated.")
         return None
 
     try:
@@ -116,7 +120,7 @@ def _generate_export_data(state: AppState, format_str: str, dpi: int) -> bytes |
             edgecolor="none",
         )
         buffer.seek(0)
-        return buffer.getvalue()
+        return buffer
 
     except Exception as e:
         st.error(f"Export failed: {e}")

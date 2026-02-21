@@ -9,6 +9,7 @@ from __future__ import annotations
 import streamlit as st
 
 from plottini.ui.components import (
+    generate_figure,
     render_data_tab,
     render_export_tab,
     render_preview_column,
@@ -200,6 +201,9 @@ def main() -> None:
 
     # Get or create app state
     state = get_state()
+
+    # Generate figure early so it's available for both preview and export
+    generate_figure(state)
 
     # Main content with tabs
     col_main, col_preview = st.columns([7, 3])
