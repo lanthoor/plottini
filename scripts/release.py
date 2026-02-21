@@ -6,9 +6,9 @@ This script automates the release process using Calendar Versioning (CalVer):
 2. --tag: Tag the release on main after PR is merged
 3. --post-release: Bump to dev version after tagging
 
-CalVer Format: YYYY.MM.MICRO (PEP 440 compliant)
+CalVer Format: YYYY.M.MICRO (PEP 440 compliant, no zero-padding)
 - YYYY: Full year (e.g., 2026)
-- MM: Month (01-12, zero-padded)
+- M: Month (1-12, no zero-padding for PEP 440 compliance)
 - MICRO: Release number within that month (0, 1, 2...)
 
 Usage:
@@ -23,9 +23,9 @@ Usage:
     python scripts/release.py --post-release
 
     # With explicit version:
-    python scripts/release.py --prepare --version 2026.02.0
-    python scripts/release.py --tag --version 2026.02.0
-    python scripts/release.py --post-release --version 2026.02.0
+    python scripts/release.py --prepare --version 2026.2.0
+    python scripts/release.py --tag --version 2026.2.0
+    python scripts/release.py --post-release --version 2026.2.0
 
     # Preview changes:
     python scripts/release.py --prepare --dry-run
@@ -47,11 +47,12 @@ VERSION_FILES = [
     "src/plottini/__init__.py",
     "tests/test_basic.py",
     "tests/test_cli.py",
+    "uv.lock",
 ]
 CHANGELOG_FILE = PROJECT_ROOT / "CHANGELOG.md"
 
-# CalVer pattern: YYYY.MM.MICRO (with optional .devN suffix)
-# Accepts 1-2 digit months to handle PEP 440 normalization (e.g., 2026.2.0 vs 2026.02.0)
+# CalVer pattern: YYYY.M.MICRO (with optional .devN suffix)
+# Accepts 1-2 digit months for flexibility (e.g., 2026.2.0 or 2026.02.0)
 CALVER_PATTERN = re.compile(r"^(\d{4})\.(\d{1,2})\.(\d+)(?:\.dev\d+)?$")
 
 
@@ -80,10 +81,10 @@ def validate_calver(version: str) -> str:
     """Validate and normalize CalVer version string.
 
     Args:
-        version: Version string to validate (e.g., "2026.02.0" or "2026.2.0")
+        version: Version string to validate (e.g., "2026.2.0" or "2026.02.0")
 
     Returns:
-        Normalized version with zero-padded month, without .dev suffix
+        PEP 440 compliant version (no zero-padding), without .dev suffix
 
     Raises:
         SystemExit: If version format is invalid
@@ -93,7 +94,7 @@ def validate_calver(version: str) -> str:
     match = CALVER_PATTERN.match(normalized)
     if not match:
         print(f"Error: Invalid CalVer format: {version}")
-        print("Version must be in YYYY.MM.MICRO format (e.g., 2026.02.0)")
+        print("Version must be in YYYY.M.MICRO format (e.g., 2026.2.0)")
         sys.exit(1)
 
     year_str, month_str, micro_str = match.groups()
@@ -102,11 +103,11 @@ def validate_calver(version: str) -> str:
 
     if not (1 <= month_int <= 12):
         print(f"Error: Invalid CalVer month: {version}")
-        print("Month component must be between 01 and 12.")
+        print("Month component must be between 1 and 12.")
         sys.exit(1)
 
-    # Return normalized version with zero-padded month
-    return f"{year_str}.{month_int:02d}.{micro_int}"
+    # Return PEP 440 compliant version (no zero-padding)
+    return f"{year_str}.{month_int}.{micro_int}"
 
 
 def calculate_next_version(current: str, force_micro: bool = False) -> str:
@@ -117,7 +118,7 @@ def calculate_next_version(current: str, force_micro: bool = False) -> str:
         force_micro: If True, increment micro within same year.month
 
     Returns:
-        Next version in YYYY.MM.MICRO format
+        Next version in YYYY.M.MICRO format (PEP 440 compliant)
     """
     # Strip any .dev suffix from current version
     base_version = strip_dev_suffix(current)
@@ -127,7 +128,7 @@ def calculate_next_version(current: str, force_micro: bool = False) -> str:
     if not match:
         # If current version isn't CalVer, start fresh with current date
         now = datetime.now(timezone.utc)
-        return f"{now.year}.{now.month:02d}.0"
+        return f"{now.year}.{now.month}.0"
 
     current_year = int(match.group(1))
     current_month = int(match.group(2))
@@ -140,16 +141,16 @@ def calculate_next_version(current: str, force_micro: bool = False) -> str:
 
     if force_micro or (target_year == current_year and target_month == current_month):
         # Same year.month: increment micro
-        return f"{current_year}.{current_month:02d}.{current_micro + 1}"
+        return f"{current_year}.{current_month}.{current_micro + 1}"
     else:
         # New month: reset micro to 0
-        return f"{target_year}.{target_month:02d}.0"
+        return f"{target_year}.{target_month}.0"
 
 
 def calculate_dev_version(release_version: str) -> str:
     """Calculate the dev version to set after a release.
 
-    After releasing 2026.02.0, set version to 2026.02.1.dev0
+    After releasing 2026.2.0, set version to 2026.2.1.dev0
     """
     match = CALVER_PATTERN.match(release_version)
     if not match:
@@ -160,7 +161,7 @@ def calculate_dev_version(release_version: str) -> str:
     month = int(match.group(2))
     micro = int(match.group(3))
 
-    return f"{year}.{month:02d}.{micro + 1}.dev0"
+    return f"{year}.{month}.{micro + 1}.dev0"
 
 
 def update_version_file(filepath: Path, old_version: str, new_version: str) -> bool:
@@ -190,10 +191,17 @@ def update_version_file(filepath: Path, old_version: str, new_version: str) -> b
             content,
         )
     elif "test_cli.py" in str(filepath):
-        # Match any version format for replacement
+        # Match version number only (not the closing quote)
         new_content = re.sub(
-            r"Plottini version [^\s]+",
+            r"Plottini version [0-9]+\.[0-9]+\.[0-9]+(?:\.dev[0-9]+)?",
             f"Plottini version {new_version}",
+            content,
+        )
+    elif "uv.lock" in str(filepath):
+        # Match the plottini package version line
+        new_content = re.sub(
+            r'(name = "plottini"\nversion = ")[^"]+(")',
+            rf"\g<1>{new_version}\g<2>",
             content,
         )
     else:
@@ -688,9 +696,9 @@ Steps for a release (version auto-calculated from date):
   5. python scripts/release.py --post-release         # Bump to dev version
 
 With explicit version (recommended for --tag and --post-release):
-  python scripts/release.py --prepare --version 2026.02.0
-  python scripts/release.py --tag --version 2026.02.0
-  python scripts/release.py --post-release --version 2026.02.0
+  python scripts/release.py --prepare --version 2026.3.0
+  python scripts/release.py --tag --version 2026.3.0
+  python scripts/release.py --post-release --version 2026.3.0
 """,
     )
     parser.add_argument(
