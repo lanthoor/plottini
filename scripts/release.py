@@ -626,25 +626,25 @@ def tag_release(version: str, dry_run: bool) -> None:
 
 
 def post_release(version: str, dry_run: bool) -> None:
-    """Bump to dev version after a release.
-
-    Note: This commits directly to main, bypassing PR review. This is intentional
-    for the dev version bump as it's a routine post-release step.
+    """Bump to dev version after a release by creating a PR.
 
     Args:
         version: The release version that was just tagged
         dry_run: If True, only show what would be done
     """
     dev_version = calculate_dev_version(version)
+    branch_name = f"chore/bump-to-{dev_version}"
 
     if dry_run:
         print("\n[DRY RUN] Would perform the following actions:")
         print("  - Verify on main branch")
         print("  - Verify local main is up to date with origin/main")
         print("  - Verify version in files matches release version")
+        print(f"  - Create and checkout branch: {branch_name}")
         print(f"  - Update version files from {version} to {dev_version}")
-        print(f"  - Commit: chore(release): bump to {dev_version} [skip ci]")
-        print("  - Push to main (direct push, no PR)")
+        print(f"  - Commit: chore(release): bump to {dev_version}")
+        print(f"  - Push branch: {branch_name}")
+        print(f"  - Create PR to main with title: chore(release): bump to {dev_version}")
         return
 
     # Verify on main branch
@@ -661,25 +661,68 @@ def post_release(version: str, dry_run: bool) -> None:
     verify_version_in_files(version)
     print(f"  ✓ Version in files matches {version}")
 
+    # Verify GitHub CLI is available
+    verify_gh_cli_available()
+    print("  ✓ GitHub CLI is available")
+
+    # Check if branch already exists (locally or on remote)
+    local_exists = branch_exists(branch_name)
+    remote_exists = remote_branch_exists(branch_name)
+    if local_exists or remote_exists:
+        print(f"Error: Branch '{branch_name}' already exists.")
+        if local_exists:
+            print(f"  Delete local branch: git branch -D {branch_name}")
+        if remote_exists:
+            print(f"  Delete remote branch: git push origin --delete {branch_name}")
+        sys.exit(1)
+
+    # Create and checkout branch
+    print(f"\nCreating branch: {branch_name}")
+    run_command(["git", "checkout", "-b", branch_name])
+    print(f"  ✓ Created and checked out branch: {branch_name}")
+
     # Update version files to dev version
     update_all_version_files(version, dev_version)
 
-    # Stage and commit with [skip ci]
+    # Stage and commit
     print("\nCommitting dev version bump...")
     for filepath in VERSION_FILES:
         full_path = PROJECT_ROOT / filepath
         if full_path.exists():
             run_command(["git", "add", str(full_path)])
 
-    run_command(["git", "commit", "-m", f"chore(release): bump to {dev_version} [skip ci]"])
-    print(f"  ✓ Committed: chore(release): bump to {dev_version} [skip ci]")
+    run_command(["git", "commit", "-m", f"chore(release): bump to {dev_version}"])
+    print(f"  ✓ Committed: chore(release): bump to {dev_version}")
 
-    # Push to main
-    print("\nPushing to main...")
-    run_command(["git", "push", "origin", "main"])
-    print("  ✓ Pushed to main")
+    # Push branch
+    print("\nPushing branch...")
+    run_command(["git", "push", "-u", "origin", branch_name])
+    print(f"  ✓ Pushed branch: {branch_name}")
 
-    print(f"\n✓ Bumped to development version {dev_version}")
+    # Create PR
+    print("\nCreating pull request...")
+    pr_body = f"""## Post-release version bump
+
+Bumps version to {dev_version} after the v{version} release.
+
+This is an automated post-release version bump.
+"""
+    run_command(
+        [
+            "gh",
+            "pr",
+            "create",
+            "--title",
+            f"chore(release): bump to {dev_version}",
+            "--body",
+            pr_body,
+            "--base",
+            "main",
+        ]
+    )
+    print(f"  ✓ Created PR for version bump to {dev_version}")
+
+    print(f"\n✓ Created PR to bump to development version {dev_version}")
 
 
 def main() -> None:
@@ -693,7 +736,8 @@ Steps for a release (version auto-calculated from date):
   2. (merge the PR on GitHub)
   3. git checkout main && git pull
   4. python scripts/release.py --tag                   # Tag the release
-  5. python scripts/release.py --post-release         # Bump to dev version
+  5. python scripts/release.py --post-release         # Create dev version bump PR
+  6. (merge the dev version bump PR on GitHub)
 
 With explicit version (recommended for --tag and --post-release):
   python scripts/release.py --prepare --version 2026.3.0
@@ -714,7 +758,7 @@ With explicit version (recommended for --tag and --post-release):
     parser.add_argument(
         "--post-release",
         action="store_true",
-        help="Bump to dev version after tagging (commits directly to main)",
+        help="Create PR to bump to dev version after tagging",
     )
     parser.add_argument(
         "--micro",
