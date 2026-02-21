@@ -7,6 +7,21 @@ and this project uses [Calendar Versioning](https://calver.org/) (YYYY.MM.MICRO)
 
 ## [Unreleased]
 
+## [2026.02.1] - 2026-02-21
+
+### Features
+
+- feat(ui): add legend position control and streamline settings layout (#15)
+
+### Fixes
+
+- fix(ui): resolve Streamlit warnings, improve UX, and sync preview (#17)
+
+### Other
+
+- refactor(cli): decouple release commit, tag, and dev bump (#16)
+
+
 ## [2026.02.0] - 2026-02-20
 
 ### Other
