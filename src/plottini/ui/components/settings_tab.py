@@ -16,6 +16,12 @@ from plottini.core.plotter import ChartType, PlotConfig
 from plottini.ui.state import AppState
 
 
+def _on_config_change() -> None:
+    """Callback to regenerate figure when config changes."""
+    if "regenerate_figure" in st.session_state:
+        st.session_state.regenerate_figure()
+
+
 def render_settings_tab(state: AppState) -> None:
     """Render the Settings tab content.
 
@@ -45,30 +51,33 @@ def render_settings_tab(state: AppState) -> None:
         "Chart Type",
         options=list(chart_types.keys()),
         index=list(chart_types.keys()).index(current_type),
+        on_change=_on_config_change,
     )
     if chart_types[chart_type] != config.chart_type:
         config.chart_type = chart_types[chart_type]
 
     # Labels section
-    title = st.text_input("Title", value=config.title)
+    title = st.text_input("Title", value=config.title, on_change=_on_config_change)
     if title != config.title:
         config.title = title
 
     col_x, col_y = st.columns(2)
     with col_x:
-        x_label = st.text_input("X-Axis Label", value=config.x_label)
+        x_label = st.text_input("X-Axis Label", value=config.x_label, on_change=_on_config_change)
         if x_label != config.x_label:
             config.x_label = x_label
 
     with col_y:
-        y_label = st.text_input("Y-Axis Label", value=config.y_label)
+        y_label = st.text_input("Y-Axis Label", value=config.y_label, on_change=_on_config_change)
         if y_label != config.y_label:
             config.y_label = y_label
 
     # Secondary Y-axis label (if any series uses it)
     has_secondary = any(s.use_secondary_y for s in state.series)
     if has_secondary:
-        y2_label = st.text_input("Secondary Y-Axis Label", value=config.y2_label)
+        y2_label = st.text_input(
+            "Secondary Y-Axis Label", value=config.y2_label, on_change=_on_config_change
+        )
         if y2_label != config.y2_label:
             config.y2_label = y2_label
 
@@ -81,6 +90,7 @@ def render_settings_tab(state: AppState) -> None:
             max_value=20.0,
             value=config.figure_width,
             step=0.5,
+            on_change=_on_config_change,
         )
         if width != config.figure_width:
             config.figure_width = width
@@ -92,6 +102,7 @@ def render_settings_tab(state: AppState) -> None:
             max_value=15.0,
             value=config.figure_height,
             step=0.5,
+            on_change=_on_config_change,
         )
         if height != config.figure_height:
             config.figure_height = height
@@ -99,12 +110,14 @@ def render_settings_tab(state: AppState) -> None:
     # Display options
     col_grid, col_legend = st.columns(2)
     with col_grid:
-        show_grid = st.checkbox("Show Grid", value=config.show_grid)
+        show_grid = st.checkbox("Show Grid", value=config.show_grid, on_change=_on_config_change)
         if show_grid != config.show_grid:
             config.show_grid = show_grid
 
     with col_legend:
-        show_legend = st.checkbox("Show Legend", value=config.show_legend)
+        show_legend = st.checkbox(
+            "Show Legend", value=config.show_legend, on_change=_on_config_change
+        )
         if show_legend != config.show_legend:
             config.show_legend = show_legend
 
@@ -115,6 +128,7 @@ def render_settings_tab(state: AppState) -> None:
             "Auto position (best)",
             value=config.legend_loc == "best",
             help="Let matplotlib choose the best position",
+            on_change=_on_config_change,
         )
         if use_best:
             if config.legend_loc != "best":
@@ -148,6 +162,7 @@ def render_settings_tab(state: AppState) -> None:
             horizontal=True,
             key="legend_position",
             disabled=use_best,
+            on_change=_on_config_change,
         )
         if not use_best and legend_loc != config.legend_loc:
             config.legend_loc = legend_loc
@@ -165,6 +180,7 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
             max_value=1.0,
             value=config.bar_width,
             step=0.1,
+            on_change=_on_config_change,
         )
         if bar_width != config.bar_width:
             config.bar_width = bar_width
@@ -178,11 +194,14 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
                 max_value=100,
                 value=config.histogram_bins,
                 step=5,
+                on_change=_on_config_change,
             )
             if bins != config.histogram_bins:
                 config.histogram_bins = bins
         with col2:
-            density = st.checkbox("Show Density", value=config.histogram_density)
+            density = st.checkbox(
+                "Show Density", value=config.histogram_density, on_change=_on_config_change
+            )
             if density != config.histogram_density:
                 config.histogram_density = density
 
@@ -193,6 +212,7 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
             max_value=200,
             value=config.scatter_size,
             step=10,
+            on_change=_on_config_change,
         )
         if scatter_size != config.scatter_size:
             config.scatter_size = scatter_size
@@ -204,6 +224,7 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
             max_value=1.0,
             value=config.area_alpha,
             step=0.1,
+            on_change=_on_config_change,
         )
         if alpha != config.area_alpha:
             config.area_alpha = alpha
@@ -217,21 +238,28 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
                 max_value=0.5,
                 value=config.pie_explode,
                 step=0.05,
+                on_change=_on_config_change,
             )
             if explode != config.pie_explode:
                 config.pie_explode = explode
         with col2:
-            show_labels = st.checkbox("Show Labels", value=config.pie_show_labels)
+            show_labels = st.checkbox(
+                "Show Labels", value=config.pie_show_labels, on_change=_on_config_change
+            )
             if show_labels != config.pie_show_labels:
                 config.pie_show_labels = show_labels
 
     elif config.chart_type == ChartType.BOX:
-        show_outliers = st.checkbox("Show Outliers", value=config.box_show_outliers)
+        show_outliers = st.checkbox(
+            "Show Outliers", value=config.box_show_outliers, on_change=_on_config_change
+        )
         if show_outliers != config.box_show_outliers:
             config.box_show_outliers = show_outliers
 
     elif config.chart_type == ChartType.VIOLIN:
-        show_median = st.checkbox("Show Median Line", value=config.violin_show_median)
+        show_median = st.checkbox(
+            "Show Median Line", value=config.violin_show_median, on_change=_on_config_change
+        )
         if show_median != config.violin_show_median:
             config.violin_show_median = show_median
 
@@ -241,6 +269,7 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
             "Step Position",
             options=step_options,
             index=step_options.index(config.step_where) if config.step_where in step_options else 1,
+            on_change=_on_config_change,
         )
         if step_where != config.step_where:
             config.step_where = step_where
