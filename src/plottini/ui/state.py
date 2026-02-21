@@ -141,6 +141,19 @@ class AppState:
         self.current_figure = None
         self.error_message = None
 
+        # Increment file uploader key to reset the widget
+        # Streamlit file_uploader cannot be cleared by deleting its key,
+        # so we use a counter-based key that changes on clear
+        try:
+            import streamlit as st
+
+            if "file_uploader_key" not in st.session_state:
+                st.session_state.file_uploader_key = 0
+            st.session_state.file_uploader_key += 1
+        except Exception:
+            # st.session_state may not be available outside Streamlit runtime (e.g., tests)
+            pass
+
     def set_error(self, message: str) -> None:
         """Set error message.
 

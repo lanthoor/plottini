@@ -9,6 +9,7 @@ from __future__ import annotations
 import streamlit as st
 
 from plottini.ui.components import (
+    generate_figure,
     render_data_tab,
     render_export_tab,
     render_preview_column,
@@ -34,8 +35,9 @@ def inject_custom_css() -> None:
         }
 
         /* Main content padding - reset all Streamlit wrapper padding */
-        .main .block-container {
-            padding-top: 0 !important;
+        .main .block-container,
+        div[data-testid="stMainBlockContainer"] {
+            padding-top: 1rem !important;
             padding-bottom: 1rem !important;
             max-width: 100%;
         }
@@ -200,6 +202,10 @@ def main() -> None:
     # Get or create app state
     state = get_state()
 
+    # Store generate_figure in session state for on-demand generation by export tab
+    if "regenerate_figure" not in st.session_state:
+        st.session_state.regenerate_figure = lambda: generate_figure(state)
+
     # Main content with tabs
     col_main, col_preview = st.columns([7, 3])
 
@@ -208,7 +214,7 @@ def main() -> None:
         if state.has_data():
             _, col_btn = st.columns([8, 2])
             with col_btn:
-                if st.button("Clear All", type="secondary", use_container_width=True):
+                if st.button("Clear All", type="secondary", width="stretch"):
                     state.clear_data()
                     st.rerun()
 

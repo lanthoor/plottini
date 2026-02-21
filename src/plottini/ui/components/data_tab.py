@@ -42,11 +42,17 @@ def render_data_tab(state: AppState) -> None:
 
 def _render_file_upload(state: AppState) -> None:
     """Render file upload widget."""
+    # Use a dynamic key that changes when clear_data() is called
+    # This is the standard way to reset a file_uploader in Streamlit
+    if "file_uploader_key" not in st.session_state:
+        st.session_state.file_uploader_key = 0
+
     uploaded_files = st.file_uploader(
         "Upload TSV files",
         type=["tsv", "txt", "dat"],
         accept_multiple_files=True,
         help="Upload one or more tab-separated value files",
+        key=f"file_uploader_{st.session_state.file_uploader_key}",
     )
 
     if uploaded_files:
@@ -138,19 +144,19 @@ def _render_parser_config(state: AppState) -> None:
             index=0 if state.parser_config.encoding == "utf-8" else 1,
         )
 
-    # Apply changes button
-    if st.button("Apply Parser Settings"):
-        new_config = ParserConfig(
-            has_header=has_header,
-            comment_chars=[comment_char] if comment_char else ["#"],
-            delimiter=delimiter_options[delimiter],
-            encoding=encoding,
-        )
+    # Auto-apply parser settings when changed
+    new_config = ParserConfig(
+        has_header=has_header,
+        comment_chars=[comment_char] if comment_char else ["#"],
+        delimiter=delimiter_options[delimiter],
+        encoding=encoding,
+    )
 
-        if new_config != state.parser_config:
-            state.parser_config = new_config
-            _reparse_all_files(state)
-            st.rerun()
+    if new_config != state.parser_config:
+        state.parser_config = new_config
+        _reparse_all_files(state)
+        state.current_figure = None  # Invalidate figure to regenerate with new data
+        st.rerun()
 
 
 def _reparse_all_files(state: AppState) -> None:
@@ -268,7 +274,7 @@ def _render_file_preview(state: AppState, file_name: str) -> None:
                 preview_data[col_name] = col.data[:10]  # First 10 rows
 
             preview_df = pd.DataFrame(preview_data)
-            st.dataframe(preview_df, use_container_width=True, hide_index=True)
+            st.dataframe(preview_df, width="stretch", hide_index=True)
 
 
 def _render_alignment_config(state: AppState) -> None:
@@ -294,16 +300,10 @@ def _render_alignment_config(state: AppState) -> None:
                 index=common_columns.index(current_col) if current_col in common_columns else 0,
             )
 
-            # Note: Interpolation method UI is for future use
-            # The AlignmentConfig currently only supports column and enabled
-
-            # Apply button
-            if st.button("Apply Alignment"):
-                state.alignment = AlignmentConfig(
-                    enabled=True,
-                    column=column,
-                )
-                st.success("Alignment applied")
+            # Auto-apply alignment when changed
+            new_alignment = AlignmentConfig(enabled=True, column=column)
+            if state.alignment != new_alignment:
+                state.alignment = new_alignment
         else:
             st.warning("No common columns found across data sources")
     else:
