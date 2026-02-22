@@ -224,9 +224,7 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
                 key="settings_histogram_bins",
             )
         with col2:
-            config.histogram_density = st.checkbox(
-                "Show Density", key="settings_histogram_density"
-            )
+            config.histogram_density = st.checkbox("Show Density", key="settings_histogram_density")
 
     elif config.chart_type == ChartType.SCATTER:
         config.scatter_size = st.slider(
@@ -257,19 +255,13 @@ def _render_chart_specific_options(config: PlotConfig) -> None:
                 key="settings_pie_explode",
             )
         with col2:
-            config.pie_show_labels = st.checkbox(
-                "Show Labels", key="settings_pie_labels"
-            )
+            config.pie_show_labels = st.checkbox("Show Labels", key="settings_pie_labels")
 
     elif config.chart_type == ChartType.BOX:
-        config.box_show_outliers = st.checkbox(
-            "Show Outliers", key="settings_box_outliers"
-        )
+        config.box_show_outliers = st.checkbox("Show Outliers", key="settings_box_outliers")
 
     elif config.chart_type == ChartType.VIOLIN:
-        config.violin_show_median = st.checkbox(
-            "Show Median Line", key="settings_violin_median"
-        )
+        config.violin_show_median = st.checkbox("Show Median Line", key="settings_violin_median")
 
     elif config.chart_type == ChartType.STEP:
         step_options = ["pre", "mid", "post"]

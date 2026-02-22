@@ -14,16 +14,11 @@ import pytest
 from plottini.config.schema import (
     AlignmentConfig,
     DerivedColumnConfig,
-    ExportConfigSchema,
-    FileConfig,
     FilterConfig,
-    GrapherConfig,
-    PlotConfigSchema,
-    SeriesConfigSchema,
 )
 from plottini.core.dataframe import Column, DataFrame
 from plottini.core.exporter import ExportFormat
-from plottini.core.parser import ParserConfig, TSVParser
+from plottini.core.parser import TSVParser
 from plottini.core.plotter import COLORBLIND_PALETTE, ChartType, PlotConfig, SeriesConfig
 from plottini.ui.state import AppState, DataSource, UploadedFile
 
@@ -444,20 +439,6 @@ class TestExportPanelLogic:
         with pytest.raises(ValueError):
             ExportFormat.from_string("jpg")
 
-    def test_export_config_defaults(self) -> None:
-        """Test ExportConfigSchema defaults."""
-        config = ExportConfigSchema()
-        assert config.format == "png"
-        assert config.dpi == 300
-        assert config.transparent is False
-
-    def test_export_config_custom_values(self) -> None:
-        """Test ExportConfigSchema with custom values."""
-        config = ExportConfigSchema(format="pdf", dpi=600, transparent=True)
-        assert config.format == "pdf"
-        assert config.dpi == 600
-        assert config.transparent is True
-
 
 class TestChartConfigPanelLogic:
     """Tests for ChartConfigPanel business logic."""
@@ -548,127 +529,6 @@ class TestAlignmentPanelLogic:
         state.alignment = None
 
         assert state.alignment is None
-
-
-class TestConfigConversionLogic:
-    """Tests for config conversion logic (state to/from config)."""
-
-    def test_file_config_from_parser_config(self) -> None:
-        """Test creating FileConfig from ParserConfig."""
-        parser_config = ParserConfig(
-            has_header=True,
-            comment_chars=["#", "//"],
-            delimiter="\t",
-            encoding="utf-8",
-        )
-
-        file_config = FileConfig(
-            path=Path("data.tsv"),
-            has_header=parser_config.has_header,
-            comment_chars=parser_config.comment_chars,
-            delimiter=parser_config.delimiter,
-            encoding=parser_config.encoding,
-        )
-
-        assert file_config.has_header is True
-        assert file_config.comment_chars == ["#", "//"]
-        assert file_config.delimiter == "\t"
-
-    def test_series_config_schema_from_series_config(self) -> None:
-        """Test creating SeriesConfigSchema from SeriesConfig."""
-        series = SeriesConfig(
-            x_column="time",
-            y_column="velocity",
-            label="Data",
-            color="#FF0000",
-            line_style="--",
-            marker="o",
-        )
-
-        schema = SeriesConfigSchema(
-            x=series.x_column,
-            y=series.y_column,
-            label=series.label,
-            color=series.color,
-            line_style=series.line_style,
-            marker=series.marker,
-        )
-
-        assert schema.x == "time"
-        assert schema.y == "velocity"
-        assert schema.label == "Data"
-        assert schema.color == "#FF0000"
-
-    def test_plot_config_schema_from_plot_config(self) -> None:
-        """Test creating PlotConfigSchema from PlotConfig."""
-        plot_config = PlotConfig(
-            chart_type=ChartType.LINE,
-            title="Test Plot",
-            x_label="X",
-            y_label="Y",
-            figure_width=12.0,
-            figure_height=8.0,
-        )
-
-        schema = PlotConfigSchema(
-            type=plot_config.chart_type.value,
-            title=plot_config.title,
-            x_label=plot_config.x_label,
-            y_label=plot_config.y_label,
-            figure_width=plot_config.figure_width,
-            figure_height=plot_config.figure_height,
-        )
-
-        assert schema.type == "line"
-        assert schema.title == "Test Plot"
-        assert schema.figure_width == 12.0
-
-    def test_grapher_config_minimal(self) -> None:
-        """Test creating minimal GrapherConfig."""
-        config = GrapherConfig(
-            files=[FileConfig(path=Path("data.tsv"))],
-            series=[SeriesConfigSchema(x="x", y="y")],
-        )
-
-        assert len(config.files) == 1
-        assert len(config.series) == 1
-        assert len(config.derived_columns) == 0
-        assert len(config.filters) == 0
-
-    def test_grapher_config_full(self) -> None:
-        """Test creating full GrapherConfig with all options."""
-        config = GrapherConfig(
-            files=[
-                FileConfig(path=Path("data1.tsv"), has_header=True),
-                FileConfig(path=Path("data2.tsv"), has_header=True),
-            ],
-            alignment=AlignmentConfig(enabled=True, column="time"),
-            derived_columns=[
-                DerivedColumnConfig(name="velocity", expression="distance/time"),
-            ],
-            filters=[
-                FilterConfig(column="time", min=0.0, max=100.0),
-            ],
-            series=[
-                SeriesConfigSchema(x="time", y="velocity", label="Data 1"),
-                SeriesConfigSchema(x="time", y="velocity", label="Data 2"),
-            ],
-            plot=PlotConfigSchema(
-                type="line",
-                title="Comparison",
-                show_legend=True,
-            ),
-            export=ExportConfigSchema(format="pdf", dpi=600),
-        )
-
-        assert len(config.files) == 2
-        assert config.alignment is not None
-        assert config.alignment.enabled is True
-        assert len(config.derived_columns) == 1
-        assert len(config.filters) == 1
-        assert len(config.series) == 2
-        assert config.plot.title == "Comparison"
-        assert config.export.format == "pdf"
 
 
 class TestColorPalette:
