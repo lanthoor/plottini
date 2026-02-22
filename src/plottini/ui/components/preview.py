@@ -91,14 +91,6 @@ def render_preview_column(state: AppState) -> None:
     # Display the figure
     if state.current_figure is not None:
         st.pyplot(state.current_figure, width="stretch")
-
-        # Show figure info
-        with st.expander("Figure Info", expanded=False):
-            st.caption(
-                f'Size: {state.plot_config.figure_width}" x {state.plot_config.figure_height}"'
-            )
-            st.caption(f"Chart Type: {state.plot_config.chart_type.value}")
-            st.caption(f"Series: {len(state.series)}")
     else:
         st.warning("Unable to generate preview.")
 

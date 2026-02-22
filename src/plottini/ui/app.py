@@ -30,11 +30,6 @@ def inject_custom_css() -> None:
             display: none;
         }
 
-        /* Base font size increase for body text */
-        html, body {
-            font-size: 18px;
-        }
-
         /* Main content padding - reset all Streamlit wrapper padding */
         .main .block-container,
         div[data-testid="stMainBlockContainer"] {
@@ -58,7 +53,7 @@ def inject_custom_css() -> None:
             display: none;
         }
 
-        /* Streamlit tabs - UI5 style, keep original size */
+        /* Streamlit tabs - UI5 style */
         .stTabs [data-baseweb="tab-list"] {
             background: #fff;
             border-bottom: 1px solid #e5e5e5;
@@ -67,8 +62,7 @@ def inject_custom_css() -> None:
         }
 
         .stTabs [data-baseweb="tab"] {
-            padding: 16px 32px;
-            font-size: 14px;
+            padding: 12px 24px;
             font-weight: 500;
             color: #666;
             border-radius: 0;
@@ -97,78 +91,7 @@ def inject_custom_css() -> None:
 
         /* Tab panel padding */
         .stTabs [data-baseweb="tab-panel"] {
-            padding: 1.5rem 0;
-        }
-
-        /* Larger body text - paragraphs, labels, general text */
-        p, .stMarkdown p, .stText {
-            font-size: 18px !important;
-            line-height: 1.6 !important;
-        }
-
-        /* Form labels */
-        .stSelectbox label, .stMultiSelect label, .stTextInput label,
-        .stNumberInput label, .stTextArea label, .stFileUploader label,
-        .stSlider label, .stColorPicker label {
-            font-size: 17px !important;
-            font-weight: 500 !important;
-            margin-bottom: 6px !important;
-        }
-
-        /* Checkbox and radio labels */
-        .stCheckbox label p, .stRadio label p {
-            font-size: 17px !important;
-        }
-
-        /* Form inputs */
-        .stSelectbox [data-baseweb="select"],
-        .stMultiSelect [data-baseweb="select"],
-        .stTextInput input,
-        .stNumberInput input,
-        .stTextArea textarea {
-            font-size: 17px !important;
-        }
-
-        /* Dropdown options */
-        [data-baseweb="menu"] {
-            font-size: 17px !important;
-        }
-
-        /* Buttons */
-        .stButton > button {
-            font-size: 16px !important;
-            padding: 10px 20px !important;
-        }
-
-        /* Expander header */
-        .streamlit-expanderHeader {
-            font-size: 18px !important;
-            font-weight: 500 !important;
-        }
-
-        /* Expander content */
-        .streamlit-expanderContent p {
-            font-size: 17px !important;
-        }
-
-        /* Captions - slightly smaller */
-        .stCaption p, small, .caption {
-            font-size: 15px !important;
-        }
-
-        /* Info, warning, error, success messages */
-        .stAlert p {
-            font-size: 17px !important;
-        }
-
-        /* Data table */
-        .stDataFrame, [data-testid="stDataFrame"] {
-            font-size: 16px !important;
-        }
-
-        /* Help text / tooltips */
-        [data-baseweb="tooltip"] {
-            font-size: 15px !important;
+            padding: 1rem 0;
         }
 
         /* Legend position radio button grid - uses horizontal layout */
@@ -215,7 +138,7 @@ def main() -> None:
         if state.has_data():
             _, col_btn = st.columns([8, 2])
             with col_btn:
-                if st.button("Clear All", type="secondary", width="stretch"):
+                if st.button("Clear All", type="secondary", use_container_width=True):
                     state.clear_data()
                     st.rerun()
 

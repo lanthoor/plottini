@@ -34,8 +34,10 @@ def render_data_tab(state: AppState) -> None:
     if state.uploaded_files:
         _render_loaded_files(state)
 
-    # Alignment configuration (only show if multiple data sources)
-    if len(state.data_sources) > 1:
+    # Alignment configuration (only show if multiple files are loaded)
+    # Check unique file names, not data sources (which includes blocks)
+    unique_files = {ds.file_name for ds in state.data_sources}
+    if len(unique_files) > 1:
         with st.expander("Alignment", expanded=False):
             _render_alignment_config(state)
 
@@ -43,26 +45,29 @@ def render_data_tab(state: AppState) -> None:
 def _render_file_upload(state: AppState) -> None:
     """Render file upload widget."""
     # Use a dynamic key that changes when clear_data() is called
-    # This is the standard way to reset a file_uploader in Streamlit
     if "file_uploader_key" not in st.session_state:
         st.session_state.file_uploader_key = 0
 
+    # Allow all file types in uploader, validate after selection
     uploaded_files = st.file_uploader(
         "Upload TSV files",
-        type=["tsv", "txt", "dat"],
+        type=None,
         accept_multiple_files=True,
-        help="Upload one or more tab-separated value files",
+        help="Upload one or more tab-separated value files (.tsv, .txt, .dat)",
         key=f"file_uploader_{st.session_state.file_uploader_key}",
     )
 
     if uploaded_files:
-        # Process newly uploaded files
         for uploaded_file in uploaded_files:
             if uploaded_file.name not in state.uploaded_files:
                 _process_uploaded_file(state, uploaded_file)
 
 
-def _process_uploaded_file(state: AppState, uploaded_file) -> None:
+# Allowed file extensions for TSV data files
+ALLOWED_EXTENSIONS = {".tsv", ".txt", ".dat"}
+
+
+def _process_uploaded_file(state: AppState, uploaded_file: object) -> None:
     """Process a newly uploaded file.
 
     Args:
@@ -70,34 +75,41 @@ def _process_uploaded_file(state: AppState, uploaded_file) -> None:
         uploaded_file: Streamlit UploadedFile object
     """
     try:
-        # Read file content (seek to beginning first in case file was already read)
-        uploaded_file.seek(0)
-        content = uploaded_file.read()
-        uploaded_file.seek(0)  # Reset for potential re-read
+        file_name: str = uploaded_file.name  # type: ignore[attr-defined]
 
-        # Store in state
-        uf = UploadedFile(name=uploaded_file.name, content=content)
-        state.uploaded_files[uploaded_file.name] = uf
+        # Validate file extension
+        ext = "." + file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
+        if ext not in ALLOWED_EXTENSIONS:
+            st.error(
+                f"Invalid file type: {file_name}. "
+                f"Only .tsv, .txt, and .dat files are supported."
+            )
+            return
 
-        # Parse the file
+        uploaded_file.seek(0)  # type: ignore[attr-defined]
+        content = uploaded_file.read()  # type: ignore[attr-defined]
+        uploaded_file.seek(0)  # type: ignore[attr-defined]
+
+        uf = UploadedFile(name=file_name, content=content)
+        state.uploaded_files[file_name] = uf
+
         parser = TSVParser(state.parser_config)
-        blocks = parser.parse_blocks(uf.get_file_object(), source_name=uploaded_file.name)
+        blocks = parser.parse_blocks(uf.get_file_object(), source_name=file_name)
 
-        # Add data sources for each block
         for i, df in enumerate(blocks):
             if len(blocks) == 1:
-                ds = DataSource(file_name=uploaded_file.name, block_index=None)
+                ds = DataSource(file_name=file_name, block_index=None)
             else:
-                ds = DataSource(file_name=uploaded_file.name, block_index=i)
+                ds = DataSource(file_name=file_name, block_index=i)
 
             state.data_sources.append(ds)
             state.parsed_data[ds] = df
 
-        st.success(f"Loaded {uploaded_file.name}")
+        st.success(f"Loaded {file_name}")
         st.rerun()
 
     except Exception as e:
-        st.error(f"Error loading {uploaded_file.name}: {e}")
+        st.error(f"Error loading {uploaded_file.name}: {e}")  # type: ignore[attr-defined]
 
 
 def _render_parser_config(state: AppState) -> None:
@@ -178,10 +190,8 @@ def _reparse_all_files(state: AppState) -> None:
             blocks = parser.parse_blocks(uf.get_file_object(), source_name=file_name)
 
             for i, df in enumerate(blocks):
-                if len(blocks) == 1:
-                    ds = DataSource(file_name=file_name, block_index=None)
-                else:
-                    ds = DataSource(file_name=file_name, block_index=i)
+                block_idx = None if len(blocks) == 1 else i
+                ds = DataSource(file_name=file_name, block_index=block_idx)
 
                 state.data_sources.append(ds)
                 state.parsed_data[ds] = df
