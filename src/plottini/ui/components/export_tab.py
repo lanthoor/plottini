@@ -141,47 +141,4 @@ def _generate_export_data(state: AppState, format_str: str, dpi: int) -> BytesIO
         return None
 
 
-def render_config_export(state: AppState) -> None:
-    """Render configuration save/load section.
-
-    Args:
-        state: Application state
-    """
-    st.subheader("Configuration")
-
-    col_save, col_load = st.columns(2)
-
-    with col_save:
-        st.caption("Save current configuration")
-        config_name = st.text_input(
-            "Config Name",
-            value="plot_config",
-            key="config_save_name",
-        )
-        if st.button("Save Config"):
-            _save_config(state, config_name)
-
-    with col_load:
-        st.caption("Load configuration file")
-        uploaded_config = st.file_uploader(
-            "Upload Config",
-            type=["toml"],
-            key="config_upload",
-        )
-        if uploaded_config:
-            _load_config(state, uploaded_config)
-
-
-def _save_config(state: AppState, name: str) -> None:
-    """Save current configuration to downloadable TOML file."""
-    # Configuration save/load is a future feature
-    st.info("Configuration save functionality coming soon.")
-
-
-def _load_config(state: AppState, uploaded_file) -> None:
-    """Load configuration from uploaded TOML file."""
-    # Configuration save/load is a future feature
-    st.info("Configuration load functionality coming soon.")
-
-
-__all__ = ["render_export_tab", "render_config_export"]
+__all__ = ["render_export_tab"]
