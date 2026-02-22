@@ -14,10 +14,9 @@ Plottini is a user-friendly graph builder for creating publication-quality plots
 # Install dependencies (using uv - recommended)
 uv sync --extra dev
 
-# Run the web UI
-uv run plottini                    # Default port 8501
+# Run the desktop app (PyWebView + Streamlit)
+uv run plottini                    # Auto-selects available port
 uv run plottini --port 8080        # Custom port
-uv run plottini --no-open          # Don't open browser
 
 # Headless rendering
 uv run plottini render --config graph.toml --output figure.png
@@ -39,7 +38,8 @@ uv run mypy src/plottini           # Type check
 
 ```
 src/plottini/
-├── cli.py              # Click CLI: launches Streamlit or headless render
+├── desktop.py          # PyWebView desktop launcher
+├── cli.py              # Click CLI: launches desktop app or headless render
 ├── core/
 │   ├── parser.py       # TSVParser: reads TSV files into DataFrames
 │   ├── dataframe.py    # DataFrame/Column: data container with operations
@@ -122,7 +122,7 @@ Follow this workflow for all changes:
 ## Critical Rules
 
 1. **Never disable or delete tests** - fix the code, not the tests
-2. **No feature creep** - only implement what's in PLAN.md
+2. **No feature creep** - only implement what's requested
 3. **Safe expression evaluation** - use AST parsing with whitelist, never `eval()`
 4. **Update version in 5 places** when releasing: `src/plottini/__init__.py`, `pyproject.toml`, `tests/test_basic.py`, `tests/test_cli.py`, `uv.lock`
 

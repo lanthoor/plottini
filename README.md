@@ -10,7 +10,7 @@
 
 ## Overview
 
-Plottini is designed for researchers, scientists, and anyone who needs to create high-quality graphs from tabular data without writing code. With an intuitive web-based UI powered by NiceGUI and matplotlib as the rendering backend, Plottini makes it easy to:
+Plottini is designed for researchers, scientists, and anyone who needs to create high-quality graphs from tabular data without writing code. With an intuitive UI powered by Streamlit (available as a desktop app via PyWebView or in the browser) and matplotlib as the rendering backend, Plottini makes it easy to:
 
 - Load TSV data files with automatic validation
 - Create various chart types (line, bar, scatter, histogram, and more)
@@ -71,7 +71,7 @@ pip install -e .
 plottini
 ```
 
-This will start the web interface on `http://localhost:8050` and automatically open it in your browser.
+This will start the desktop app (using PyWebView) with the Streamlit-based interface.
 
 ### Command-Line Options
 
@@ -79,11 +79,8 @@ This will start the web interface on `http://localhost:8050` and automatically o
 # Start on a specific port
 plottini --port 8080
 
-# Don't open browser automatically
-plottini --no-open
-
-# Load a configuration file
-plottini --config my-graph.toml
+# Show version
+plottini version
 ```
 
 ### Expert Mode: Headless Rendering
@@ -170,19 +167,11 @@ format = "png"
 dpi = 300
 ```
 
-Load it with:
-
-```bash
-plottini --config my-graph.toml
-```
-
-Or render directly:
+Render directly from the command line:
 
 ```bash
 plottini render --config my-graph.toml --output velocity.png
 ```
-
-See [PLAN.md](PLAN.md) for the complete configuration specification.
 
 ---
 
@@ -218,14 +207,14 @@ Available preset transformations:
 - Python 3.10 or higher
 - matplotlib ≥ 3.7
 - numpy ≥ 1.24
-- nicegui ≥ 1.4
+- streamlit ≥ 1.30
+- pywebview ≥ 4.0
 - click ≥ 8.1
 
 ---
 
 ## Documentation
 
-- **[PLAN.md](PLAN.md)** - Complete implementation plan and technical specifications
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development setup and contribution guidelines
 - **[AGENTS.md](AGENTS.md)** - Instructions for AI agents working on the project
 
@@ -244,9 +233,9 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 ## Roadmap
 
-See [PLAN.md](PLAN.md) for the detailed implementation plan.
+### Status: Complete
 
-### Current Status: Phase 5 - Polish & Testing
+All planned features have been implemented:
 
 - [x] Project structure
 - [x] Package configuration
@@ -261,9 +250,9 @@ See [PLAN.md](PLAN.md) for the detailed implementation plan.
 - [x] Multi-file support and alignment
 - [x] Secondary Y-axis support
 - [x] Configuration system (TOML)
-- [x] UI implementation with NiceGUI
+- [x] UI implementation with Streamlit
+- [x] Desktop app mode with PyWebView
 - [x] Headless render mode
-- [ ] Final documentation and polish
 
 ---
 
@@ -287,7 +276,8 @@ Copyright (c) 2025 Lallu Anthoor
 
 Built with:
 - [matplotlib](https://matplotlib.org/) - The plotting backend
-- [NiceGUI](https://nicegui.io/) - The web UI framework
+- [Streamlit](https://streamlit.io/) - The web UI framework
+- [PyWebView](https://pywebview.flowrl.com/) - Desktop app wrapper
 - [Click](https://click.palletsprojects.com/) - CLI framework
 - [NumPy](https://numpy.org/) - Numerical computing
 
