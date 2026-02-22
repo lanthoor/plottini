@@ -15,22 +15,20 @@ class TestFindFreePort:
         assert 1 <= port <= 65535
 
     def test_returns_different_ports(self) -> None:
-        """Test that consecutive calls can return different ports."""
-        # Note: This might occasionally fail if the same port is reused,
-        # but generally different calls should get different ports
+        """Test that consecutive calls return different ports."""
         ports = {find_free_port() for _ in range(5)}
-        # At least some ports should be different
-        assert len(ports) >= 1
+        # All 5 calls should return different ports
+        assert len(ports) == 5
 
     def test_port_is_bindable(self) -> None:
-        """Test that the returned port can be bound to."""
+        """Test that the returned port can be bound to localhost."""
         import socket
 
         port = find_free_port()
-        # Try binding to the port
+        # Try binding to the port on localhost
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             # This should not raise an exception
-            s.bind(("", port))
+            s.bind(("127.0.0.1", port))
 
 
 class TestStartDesktop:
@@ -45,22 +43,18 @@ class TestStartDesktop:
         with (
             patch.dict("sys.modules", {"webview": mock_webview}),
             patch("plottini.desktop.threading.Thread"),
-            patch("plottini.desktop.time.sleep"),
+            patch("plottini.desktop._wait_for_server", return_value=True),
         ):
-            # Need to reimport to pick up the mock
-            import importlib
+            from plottini.desktop import start_desktop
 
-            import plottini.desktop
-
-            importlib.reload(plottini.desktop)
-
-            plottini.desktop.start_desktop(port=9999)
+            start_desktop(port=9999)
 
             # Verify window was created with correct URL
             mock_webview.create_window.assert_called_once()
             call_args = mock_webview.create_window.call_args
             assert call_args[0][0] == "Plottini"  # title
             assert "localhost:9999" in call_args[0][1]  # URL
+            mock_webview.start.assert_called_once()
 
     def test_start_desktop_finds_free_port_when_none_provided(self) -> None:
         """Test that start_desktop finds a free port when none provided."""
@@ -71,26 +65,16 @@ class TestStartDesktop:
         with (
             patch.dict("sys.modules", {"webview": mock_webview}),
             patch("plottini.desktop.threading.Thread"),
-            patch("plottini.desktop.time.sleep"),
+            patch("plottini.desktop._wait_for_server", return_value=True),
+            patch("plottini.desktop.find_free_port", return_value=12345),
         ):
-            import importlib
+            from plottini.desktop import start_desktop
 
-            import plottini.desktop
+            start_desktop(port=None)
 
-            importlib.reload(plottini.desktop)
-
-            # Patch find_free_port after reload
-            original_find_free_port = plottini.desktop.find_free_port
-            plottini.desktop.find_free_port = MagicMock(return_value=12345)
-
-            try:
-                plottini.desktop.start_desktop(port=None)
-
-                plottini.desktop.find_free_port.assert_called_once()
-                call_args = mock_webview.create_window.call_args
-                assert "localhost:12345" in call_args[0][1]
-            finally:
-                plottini.desktop.find_free_port = original_find_free_port
+            call_args = mock_webview.create_window.call_args
+            assert "localhost:12345" in call_args[0][1]
+            mock_webview.start.assert_called_once()
 
     def test_start_desktop_creates_window_with_correct_size(self) -> None:
         """Test that start_desktop creates window with correct dimensions."""
@@ -101,17 +85,55 @@ class TestStartDesktop:
         with (
             patch.dict("sys.modules", {"webview": mock_webview}),
             patch("plottini.desktop.threading.Thread"),
-            patch("plottini.desktop.time.sleep"),
+            patch("plottini.desktop._wait_for_server", return_value=True),
         ):
-            import importlib
+            from plottini.desktop import start_desktop
 
-            import plottini.desktop
-
-            importlib.reload(plottini.desktop)
-
-            plottini.desktop.start_desktop(port=8080)
+            start_desktop(port=8080)
 
             call_kwargs = mock_webview.create_window.call_args[1]
             assert call_kwargs["width"] == 1400
             assert call_kwargs["height"] == 900
             assert call_kwargs["min_size"] == (800, 600)
+            mock_webview.start.assert_called_once()
+
+    def test_start_desktop_exits_if_window_is_none(self) -> None:
+        """Test that start_desktop exits if window creation fails."""
+        mock_webview = MagicMock()
+        mock_webview.create_window.return_value = None
+
+        with (
+            patch.dict("sys.modules", {"webview": mock_webview}),
+            patch("plottini.desktop.threading.Thread"),
+            patch("plottini.desktop._wait_for_server", return_value=True),
+            patch("plottini.desktop.sys.exit", side_effect=SystemExit(1)) as mock_exit,
+        ):
+            from plottini.desktop import start_desktop
+
+            try:
+                start_desktop(port=8080)
+            except SystemExit:
+                pass
+
+            mock_exit.assert_called_once_with(1)
+            mock_webview.start.assert_not_called()
+
+    def test_start_desktop_exits_if_server_fails_to_start(self) -> None:
+        """Test that start_desktop exits if Streamlit fails to start."""
+        mock_webview = MagicMock()
+
+        with (
+            patch.dict("sys.modules", {"webview": mock_webview}),
+            patch("plottini.desktop.threading.Thread"),
+            patch("plottini.desktop._wait_for_server", return_value=False),
+            patch("plottini.desktop.sys.exit", side_effect=SystemExit(1)) as mock_exit,
+        ):
+            from plottini.desktop import start_desktop
+
+            try:
+                start_desktop(port=8080)
+            except SystemExit:
+                pass
+
+            mock_exit.assert_called_once_with(1)
+            mock_webview.create_window.assert_not_called()

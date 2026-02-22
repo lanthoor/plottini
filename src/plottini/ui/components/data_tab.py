@@ -50,7 +50,7 @@ def _render_file_upload(state: AppState) -> None:
 
     uploaded_files = st.file_uploader(
         "Upload TSV files",
-        type=None,  # Allow all file types - filtering caused issues in PyWebView
+        type=["tsv", "txt", "dat"],
         accept_multiple_files=True,
         help="Upload one or more tab-separated value files (.tsv, .txt, .dat)",
         key=f"file_uploader_{st.session_state.file_uploader_key}",
