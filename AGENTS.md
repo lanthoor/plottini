@@ -8,7 +8,7 @@ This document provides guidance for AI agents (like Claude, GPT, etc.) working o
 
 **Plottini** is a user-friendly graph builder that allows non-technical users to create publication-quality plots from TSV data files. It features:
 
-- A NiceGUI-based web UI for interactive graph creation
+- A Streamlit-based web UI (with PyWebView desktop mode) for interactive graph creation
 - Matplotlib backend for rendering
 - Support for multiple chart types and data transformations
 - Export to PNG, SVG, PDF, and EPS formats
@@ -16,7 +16,7 @@ This document provides guidance for AI agents (like Claude, GPT, etc.) working o
 
 **Target Users**: Researchers, scientists, and data analysts who need publication-quality graphs without writing code.
 
-**Tech Stack**: Python 3.10+, NiceGUI, matplotlib, numpy, Click
+**Tech Stack**: Python 3.10+, Streamlit, PyWebView, matplotlib, numpy, Click
 
 ---
 
@@ -24,7 +24,6 @@ This document provides guidance for AI agents (like Claude, GPT, etc.) working o
 
 | File | Purpose |
 |------|---------|
-| `PLAN.md` | Complete implementation plan with detailed specifications |
 | `CONTRIBUTING.md` | Development setup, workflow, and contribution guidelines |
 | `README.md` | User-facing documentation and quick start guide |
 | `pyproject.toml` | Package configuration, dependencies, and tool settings |
@@ -81,10 +80,10 @@ This document provides guidance for AI agents (like Claude, GPT, etc.) working o
 - If tests fail after changes, FIX the code, not the tests
 
 **3. No Feature Creep**
-- ❌ **NEVER add features not in PLAN.md**
+- ❌ **NEVER add features not explicitly requested**
 - ❌ **NEVER implement "nice to have" features**
 - ❌ **NEVER add extra functionality "while you're at it"**
-- ✅ **ONLY implement what's specified in current phase/task**
+- ✅ **ONLY implement what's specified in the current task**
 - ✅ If you think something is missing, note it but don't implement
 
 **4. No Unnecessary Documentation**
@@ -100,10 +99,10 @@ This document provides guidance for AI agents (like Claude, GPT, etc.) working o
 - ❌ **NEVER add complexity for hypothetical performance**
 - ✅ **ONLY optimize if performance is actually a problem**
 
-**6. Stick to the Specification**
-- The specification in PLAN.md is the source of truth
+**6. Stick to the Task**
+- Follow the user's request as the source of truth
 - If something is unclear, ask - don't assume
-- If you think the spec is wrong, note it but follow it anyway
+- If you think something is wrong, note it but follow instructions anyway
 
 ---
 
@@ -164,7 +163,7 @@ __version__ = "0.1.1"  # For bug fix
 
 ### 3. Implement Changes
 
-1. **Read the specification** in `PLAN.md` for the module/feature
+1. **Review existing code** for the module/feature you're working on
 2. **Create test file first** (`tests/test_<module>.py`)
 3. **Write failing tests** for the functionality
 4. **Implement the feature** to make tests pass
@@ -258,7 +257,7 @@ git branch -d feature/your-branch-name
 
 ### Before You Start
 
-1. Check `PLAN.md` for the module specification
+1. Review existing code for the module you're working on
 2. Review existing tests to understand expected behavior
 3. Look at similar code in the project for consistency
 
@@ -486,7 +485,7 @@ uv run twine check dist/*
 
 ## Questions to Ask Before Implementation
 
-1. Does this match the specification in PLAN.md?
+1. Does this match what's being requested?
 2. Are there tests for this functionality?
 3. Is the API intuitive for users?
 4. Are error cases handled gracefully?

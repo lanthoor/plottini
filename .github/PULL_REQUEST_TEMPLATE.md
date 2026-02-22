@@ -52,4 +52,3 @@ Example: feat(parser): add CSV delimiter support
 - [ ] I have read the [CONTRIBUTING.md](../CONTRIBUTING.md) guidelines
 - [ ] I have followed the conventional commit format for commits
 - [ ] I have updated documentation if needed
-- [ ] I have not added features outside the scope of PLAN.md
