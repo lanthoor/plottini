@@ -19,4 +19,4 @@ def test_version_command():
     runner = CliRunner()
     result = runner.invoke(cli, ["version"])
     assert result.exit_code == 0
-    assert "Plottini version 2026.2.3.dev0" in result.output
+    assert "Plottini version 2026.2.4" in result.output
