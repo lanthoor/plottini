@@ -18,9 +18,6 @@ uv sync --extra dev
 uv run plottini                    # Auto-selects available port
 uv run plottini --port 8080        # Custom port
 
-# Headless rendering
-uv run plottini render --config graph.toml --output figure.png
-
 # Run tests
 uv run pytest                      # All tests
 uv run pytest tests/test_parser.py # Single file
@@ -39,7 +36,7 @@ uv run mypy src/plottini           # Type check
 ```
 src/plottini/
 ├── desktop.py          # PyWebView desktop launcher
-├── cli.py              # Click CLI: launches desktop app or headless render
+├── cli.py              # Click CLI: launches desktop app
 ├── core/
 │   ├── parser.py       # TSVParser: reads TSV files into DataFrames
 │   ├── dataframe.py    # DataFrame/Column: data container with operations
@@ -47,9 +44,7 @@ src/plottini/
 │   ├── exporter.py     # Exporter: saves figures to PNG/SVG/PDF/EPS
 │   └── transforms.py   # Mathematical transformations (log, sqrt, trig)
 ├── config/
-│   ├── schema.py       # Dataclasses for TOML configuration
-│   ├── loader.py       # TOML config file parser
-│   └── defaults.py     # Default values
+│   └── schema.py       # Dataclasses for UI state (AlignmentConfig, etc.)
 ├── ui/
 │   ├── app.py          # Streamlit main app
 │   ├── state.py        # Session state management
@@ -63,7 +58,7 @@ src/plottini/
 ## Key Conventions
 
 - **Conventional Commits**: `feat(scope): message`, `fix(scope): message`
-- **Scopes**: parser, dataframe, exporter, plotter, ui, config, cli, deps
+- **Scopes**: parser, dataframe, exporter, plotter, ui, cli, deps
 - **Type hints**: Required for all function signatures (mypy strict mode)
 - **Line length**: 100 characters (Ruff configured)
 - **Tests**: In `tests/`, fixtures in `tests/fixtures/`, use Arrange-Act-Assert pattern
@@ -142,13 +137,3 @@ python scripts/release.py --micro      # Force micro increment within same month
 python scripts/release.py --version 2026.03.0  # Set explicit version
 python scripts/release.py --dry-run    # Preview changes
 ```
-
-## Configuration System
-
-TOML config files support:
-- `[[files]]` - data sources with path, has_header, comment_chars, delimiter
-- `[[series]]` - plot series with x, y, label, color, line_style, marker
-- `[plot]` - chart type, title, labels, dimensions, grid/legend options
-- `[export]` - format, dpi, transparent background
-- `[[derived_columns]]` - computed columns from expressions
-- `[[filters]]` - row filters by column value range

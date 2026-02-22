@@ -13,7 +13,6 @@ Thank you for your interest in contributing to Plottini! This document provides 
 - [Commit Message Format](#commit-message-format)
 - [Pull Request Process](#pull-request-process)
 - [Project Structure](#project-structure)
-- [Project Status](#project-status)
 
 ---
 
@@ -176,10 +175,10 @@ Example test:
 def test_parser_validates_numeric_data():
     """Test that parser rejects non-numeric data."""
     parser = TSVParser(ParserConfig(has_header=False))
-    
+
     with pytest.raises(ParseError) as exc_info:
         parser.parse("tests/fixtures/malformed/non_numeric.tsv")
-    
+
     assert "invalid numeric value" in str(exc_info.value).lower()
 ```
 
@@ -221,7 +220,6 @@ The scope provides additional context about what part of the codebase is affecte
 - `exporter` - Export functionality
 - `plotter` - Plotting functionality
 - `ui` - User interface
-- `config` - Configuration system
 - `cli` - Command-line interface
 - `deps` - Dependencies
 
@@ -305,7 +303,7 @@ Examples:
 plottini/
 ├── src/plottini/          # Main package code
 │   ├── core/              # Core functionality (parsing, plotting, export)
-│   ├── config/            # Configuration management
+│   ├── config/            # Configuration schema
 │   ├── ui/                # Streamlit user interface
 │   └── utils/             # Helper utilities
 ├── tests/                 # Test suite
@@ -315,21 +313,6 @@ plottini/
 ├── CONTRIBUTING.md        # This file
 └── README.md              # User documentation
 ```
-
----
-
-## Project Status
-
-### Status: All Phases Complete
-
-The project is production-ready with all planned features implemented:
-- TSV parsing with multi-block support
-- 13 chart types
-- Data transformations and derived columns
-- Multi-file support with alignment
-- Streamlit web interface with PyWebView desktop mode
-- Headless render mode for batch processing
-- TOML configuration system
 
 ---
 
@@ -351,15 +334,15 @@ def parse_tsv_file(
     comment_chars: list[str] | None = None
 ) -> DataFrame:
     """Parse a TSV file into a DataFrame.
-    
+
     Args:
         file_path: Path to the TSV file
         has_header: Whether the first row is a header
         comment_chars: Characters that start comment lines
-        
+
     Returns:
         DataFrame containing the parsed data
-        
+
     Raises:
         ParseError: If data is malformed or non-numeric
     """
@@ -394,7 +377,6 @@ from plottini.utils.errors import ParseError
 
 ## Getting Help
 
-- **Questions**: Open a [GitHub Discussion](https://github.com/lanthoor/plottini/discussions)
 - **Bugs**: Open a [GitHub Issue](https://github.com/lanthoor/plottini/issues)
 - **Contact**: Lallu Anthoor (dev@spendly.co.in)
 
@@ -403,7 +385,3 @@ from plottini.utils.errors import ParseError
 ## License
 
 By contributing to Plottini, you agree that your contributions will be licensed under the MIT License.
-
----
-
-Thank you for contributing to Plottini! 🎉
