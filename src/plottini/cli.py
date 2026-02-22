@@ -2,63 +2,24 @@
 
 from __future__ import annotations
 
-import subprocess
-import sys
 from pathlib import Path
 
 import click
 
 
 @click.group(invoke_without_command=True)
-@click.option("--port", default=8501, help="Port for web UI (default: 8501)")
-@click.option("--no-open", is_flag=True, help="Do not open browser automatically")
+@click.option("--port", default=None, type=int, help="Port number for the app")
 @click.pass_context
-def cli(ctx: click.Context, port: int, no_open: bool) -> None:
+def cli(ctx: click.Context, port: int | None) -> None:
     """Plottini - User-friendly graph builder for publication-quality plots.
 
-    Start the web UI to interactively create graphs from TSV data files.
+    Start the desktop app to interactively create graphs from TSV data files.
     """
     if ctx.invoked_subcommand is None:
-        # Start Streamlit UI
-        _start_streamlit(port=port, open_browser=not no_open)
+        # Start desktop app with PyWebView
+        from plottini.desktop import start_desktop
 
-
-def _start_streamlit(port: int = 8501, open_browser: bool = True) -> None:
-    """Start the Streamlit application.
-
-    Args:
-        port: Port to run on
-        open_browser: Whether to open browser automatically
-    """
-    # Get path to app.py
-    app_path = Path(__file__).parent / "ui" / "app.py"
-
-    # Build command
-    cmd = [
-        sys.executable,
-        "-m",
-        "streamlit",
-        "run",
-        str(app_path),
-        "--server.port",
-        str(port),
-        "--server.headless",
-        "true" if not open_browser else "false",
-    ]
-
-    if not open_browser:
-        cmd.extend(["--browser.serverAddress", "localhost"])
-
-    click.echo(f"Starting Plottini on http://localhost:{port}")
-    click.echo("Press Ctrl+C to stop")
-
-    try:
-        subprocess.run(cmd, check=True)
-    except KeyboardInterrupt:
-        click.echo("\nStopping Plottini...")
-    except subprocess.CalledProcessError as e:
-        click.echo(f"Error starting Streamlit: {e}", err=True)
-        raise SystemExit(1) from None
+        start_desktop(port)
 
 
 @cli.command()

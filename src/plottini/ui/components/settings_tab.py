@@ -24,6 +24,9 @@ def render_settings_tab(state: AppState) -> None:
     """
     config = state.plot_config
 
+    # Initialize session state with current config values if not set
+    _init_settings_state(config)
+
     # Chart type selection
     chart_types = {
         "Line": ChartType.LINE,
@@ -39,86 +42,68 @@ def render_settings_tab(state: AppState) -> None:
         "Horizontal Bar": ChartType.BAR_HORIZONTAL,
         "Polar": ChartType.POLAR,
     }
+    chart_type_names = list(chart_types.keys())
 
-    current_type = next((k for k, v in chart_types.items() if v == config.chart_type), "Line")
     chart_type = st.selectbox(
         "Chart Type",
-        options=list(chart_types.keys()),
-        index=list(chart_types.keys()).index(current_type),
+        options=chart_type_names,
+        key="settings_chart_type",
     )
-    if chart_types[chart_type] != config.chart_type:
-        config.chart_type = chart_types[chart_type]
+    config.chart_type = chart_types[chart_type]
 
     # Labels section
-    title = st.text_input("Title", value=config.title)
-    if title != config.title:
-        config.title = title
+    config.title = st.text_input("Title", key="settings_title")
 
     col_x, col_y = st.columns(2)
     with col_x:
-        x_label = st.text_input("X-Axis Label", value=config.x_label)
-        if x_label != config.x_label:
-            config.x_label = x_label
+        config.x_label = st.text_input("X-Axis Label", key="settings_x_label")
 
     with col_y:
-        y_label = st.text_input("Y-Axis Label", value=config.y_label)
-        if y_label != config.y_label:
-            config.y_label = y_label
+        config.y_label = st.text_input("Y-Axis Label", key="settings_y_label")
 
     # Secondary Y-axis label (if any series uses it)
     has_secondary = any(s.use_secondary_y for s in state.series)
     if has_secondary:
-        y2_label = st.text_input("Secondary Y-Axis Label", value=config.y2_label)
-        if y2_label != config.y2_label:
-            config.y2_label = y2_label
+        config.y2_label = st.text_input("Secondary Y-Axis Label", key="settings_y2_label")
 
     # Figure dimensions
     col_w, col_h = st.columns(2)
     with col_w:
-        width = st.number_input(
+        config.figure_width = st.number_input(
             "Width (inches)",
             min_value=4.0,
             max_value=20.0,
-            value=config.figure_width,
             step=0.5,
+            key="settings_width",
         )
-        if width != config.figure_width:
-            config.figure_width = width
 
     with col_h:
-        height = st.number_input(
+        config.figure_height = st.number_input(
             "Height (inches)",
             min_value=3.0,
             max_value=15.0,
-            value=config.figure_height,
             step=0.5,
+            key="settings_height",
         )
-        if height != config.figure_height:
-            config.figure_height = height
 
     # Display options
     col_grid, col_legend = st.columns(2)
     with col_grid:
-        show_grid = st.checkbox("Show Grid", value=config.show_grid)
-        if show_grid != config.show_grid:
-            config.show_grid = show_grid
+        config.show_grid = st.checkbox("Show Grid", key="settings_grid")
 
     with col_legend:
-        show_legend = st.checkbox("Show Legend", value=config.show_legend)
-        if show_legend != config.show_legend:
-            config.show_legend = show_legend
+        config.show_legend = st.checkbox("Show Legend", key="settings_legend")
 
     # Legend position selector (only show when legend is enabled)
     if config.show_legend:
         # "Best" checkbox
         use_best = st.checkbox(
             "Auto position (best)",
-            value=config.legend_loc == "best",
             help="Let matplotlib choose the best position",
+            key="settings_legend_best",
         )
         if use_best:
-            if config.legend_loc != "best":
-                config.legend_loc = "best"
+            config.legend_loc = "best"
 
         # 3x3 grid of legend positions (disabled when "best" is checked)
         legend_options = {
@@ -133,117 +118,166 @@ def render_settings_tab(state: AppState) -> None:
             "lower right": "↘ Lower Right",
         }
         options_list = list(legend_options.keys())
-        # Default to "upper right" if currently "best"
-        current_idx = (
-            options_list.index(config.legend_loc)
-            if config.legend_loc in options_list
-            else options_list.index("upper right")
-        )
 
         legend_loc = st.radio(
             "Legend Position",
             options=options_list,
-            index=current_idx,
             format_func=lambda x: legend_options[x],
             horizontal=True,
-            key="legend_position",
+            key="settings_legend_position",
             disabled=use_best,
         )
-        if not use_best and legend_loc != config.legend_loc:
+        if not use_best:
             config.legend_loc = legend_loc
 
     # Chart-type specific options
     _render_chart_specific_options(config)
 
 
+def _init_settings_state(config: PlotConfig) -> None:
+    """Initialize session state for settings widgets if not already set.
+
+    Args:
+        config: Current plot configuration
+    """
+    # Chart type - need to convert enum to display name
+    chart_type_to_name = {
+        ChartType.LINE: "Line",
+        ChartType.BAR: "Bar",
+        ChartType.SCATTER: "Scatter",
+        ChartType.AREA: "Area",
+        ChartType.STEP: "Step",
+        ChartType.STEM: "Stem",
+        ChartType.HISTOGRAM: "Histogram",
+        ChartType.PIE: "Pie",
+        ChartType.BOX: "Box",
+        ChartType.VIOLIN: "Violin",
+        ChartType.BAR_HORIZONTAL: "Horizontal Bar",
+        ChartType.POLAR: "Polar",
+    }
+    if "settings_chart_type" not in st.session_state:
+        st.session_state["settings_chart_type"] = chart_type_to_name.get(config.chart_type, "Line")
+    if "settings_title" not in st.session_state:
+        st.session_state["settings_title"] = config.title
+    if "settings_x_label" not in st.session_state:
+        st.session_state["settings_x_label"] = config.x_label
+    if "settings_y_label" not in st.session_state:
+        st.session_state["settings_y_label"] = config.y_label
+    if "settings_y2_label" not in st.session_state:
+        st.session_state["settings_y2_label"] = config.y2_label
+    if "settings_width" not in st.session_state:
+        st.session_state["settings_width"] = config.figure_width
+    if "settings_height" not in st.session_state:
+        st.session_state["settings_height"] = config.figure_height
+    if "settings_grid" not in st.session_state:
+        st.session_state["settings_grid"] = config.show_grid
+    if "settings_legend" not in st.session_state:
+        st.session_state["settings_legend"] = config.show_legend
+    if "settings_legend_best" not in st.session_state:
+        st.session_state["settings_legend_best"] = config.legend_loc == "best"
+    if "settings_legend_position" not in st.session_state:
+        st.session_state["settings_legend_position"] = (
+            config.legend_loc if config.legend_loc != "best" else "upper right"
+        )
+    # Chart-specific options
+    if "settings_bar_width" not in st.session_state:
+        st.session_state["settings_bar_width"] = config.bar_width
+    if "settings_histogram_bins" not in st.session_state:
+        st.session_state["settings_histogram_bins"] = config.histogram_bins
+    if "settings_histogram_density" not in st.session_state:
+        st.session_state["settings_histogram_density"] = config.histogram_density
+    if "settings_scatter_size" not in st.session_state:
+        st.session_state["settings_scatter_size"] = config.scatter_size
+    if "settings_area_alpha" not in st.session_state:
+        st.session_state["settings_area_alpha"] = config.area_alpha
+    if "settings_pie_explode" not in st.session_state:
+        st.session_state["settings_pie_explode"] = config.pie_explode
+    if "settings_pie_labels" not in st.session_state:
+        st.session_state["settings_pie_labels"] = config.pie_show_labels
+    if "settings_box_outliers" not in st.session_state:
+        st.session_state["settings_box_outliers"] = config.box_show_outliers
+    if "settings_violin_median" not in st.session_state:
+        st.session_state["settings_violin_median"] = config.violin_show_median
+    if "settings_step_where" not in st.session_state:
+        st.session_state["settings_step_where"] = config.step_where
+
+
 def _render_chart_specific_options(config: PlotConfig) -> None:
     """Render options specific to the selected chart type."""
     if config.chart_type == ChartType.BAR or config.chart_type == ChartType.BAR_HORIZONTAL:
-        bar_width = st.slider(
+        config.bar_width = st.slider(
             "Bar Width",
             min_value=0.1,
             max_value=1.0,
-            value=config.bar_width,
             step=0.1,
+            key="settings_bar_width",
         )
-        if bar_width != config.bar_width:
-            config.bar_width = bar_width
 
     elif config.chart_type == ChartType.HISTOGRAM:
         col1, col2 = st.columns(2)
         with col1:
-            bins = st.number_input(
+            config.histogram_bins = st.number_input(
                 "Number of Bins",
                 min_value=5,
                 max_value=100,
-                value=config.histogram_bins,
                 step=5,
+                key="settings_histogram_bins",
             )
-            if bins != config.histogram_bins:
-                config.histogram_bins = bins
         with col2:
-            density = st.checkbox("Show Density", value=config.histogram_density)
-            if density != config.histogram_density:
-                config.histogram_density = density
+            config.histogram_density = st.checkbox(
+                "Show Density", key="settings_histogram_density"
+            )
 
     elif config.chart_type == ChartType.SCATTER:
-        scatter_size = st.slider(
+        config.scatter_size = st.slider(
             "Marker Size",
             min_value=10,
             max_value=200,
-            value=config.scatter_size,
             step=10,
+            key="settings_scatter_size",
         )
-        if scatter_size != config.scatter_size:
-            config.scatter_size = scatter_size
 
     elif config.chart_type == ChartType.AREA:
-        alpha = st.slider(
+        config.area_alpha = st.slider(
             "Fill Transparency",
             min_value=0.0,
             max_value=1.0,
-            value=config.area_alpha,
             step=0.1,
+            key="settings_area_alpha",
         )
-        if alpha != config.area_alpha:
-            config.area_alpha = alpha
 
     elif config.chart_type == ChartType.PIE:
         col1, col2 = st.columns(2)
         with col1:
-            explode = st.slider(
+            config.pie_explode = st.slider(
                 "Explode Factor",
                 min_value=0.0,
                 max_value=0.5,
-                value=config.pie_explode,
                 step=0.05,
+                key="settings_pie_explode",
             )
-            if explode != config.pie_explode:
-                config.pie_explode = explode
         with col2:
-            show_labels = st.checkbox("Show Labels", value=config.pie_show_labels)
-            if show_labels != config.pie_show_labels:
-                config.pie_show_labels = show_labels
+            config.pie_show_labels = st.checkbox(
+                "Show Labels", key="settings_pie_labels"
+            )
 
     elif config.chart_type == ChartType.BOX:
-        show_outliers = st.checkbox("Show Outliers", value=config.box_show_outliers)
-        if show_outliers != config.box_show_outliers:
-            config.box_show_outliers = show_outliers
+        config.box_show_outliers = st.checkbox(
+            "Show Outliers", key="settings_box_outliers"
+        )
 
     elif config.chart_type == ChartType.VIOLIN:
-        show_median = st.checkbox("Show Median Line", value=config.violin_show_median)
-        if show_median != config.violin_show_median:
-            config.violin_show_median = show_median
+        config.violin_show_median = st.checkbox(
+            "Show Median Line", key="settings_violin_median"
+        )
 
     elif config.chart_type == ChartType.STEP:
         step_options = ["pre", "mid", "post"]
-        step_where = st.selectbox(
+        config.step_where = st.selectbox(
             "Step Position",
             options=step_options,
-            index=step_options.index(config.step_where) if config.step_where in step_options else 1,
+            key="settings_step_where",
         )
-        if step_where != config.step_where:
-            config.step_where = step_where
 
 
 __all__ = ["render_settings_tab"]

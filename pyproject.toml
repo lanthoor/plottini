@@ -34,6 +34,7 @@ dependencies = [
     "numpy>=1.24",
     "streamlit>=1.30",
     "click>=8.1",
+    "pywebview>=4.0",
     "tomli>=2.0; python_version<'3.11'",
     "tomli-w>=1.0",
 ]
@@ -107,6 +108,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "tomli_w"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "webview"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

@@ -130,7 +130,7 @@ class AppState:
         return [self.parsed_data[ds] for ds in self.data_sources if ds in self.parsed_data]
 
     def clear_data(self) -> None:
-        """Clear all loaded data and reset state."""
+        """Clear all loaded data and reset state to defaults."""
         self.uploaded_files.clear()
         self.data_sources.clear()
         self.parsed_data.clear()
@@ -141,15 +141,47 @@ class AppState:
         self.current_figure = None
         self.error_message = None
 
-        # Increment file uploader key to reset the widget
-        # Streamlit file_uploader cannot be cleared by deleting its key,
-        # so we use a counter-based key that changes on clear
+        # Reset parser config to defaults
+        self.parser_config = ParserConfig()
+
+        # Reset plot config to defaults
+        self.plot_config = PlotConfig(
+            chart_type=ChartType.LINE,
+            show_grid=True,
+            show_legend=True,
+        )
+
         try:
             import streamlit as st
 
+            # Increment file uploader key to reset the widget
             if "file_uploader_key" not in st.session_state:
                 st.session_state.file_uploader_key = 0
             st.session_state.file_uploader_key += 1
+
+            # Explicitly set all settings widget keys to default values
+            st.session_state["settings_chart_type"] = "Line"
+            st.session_state["settings_title"] = ""
+            st.session_state["settings_x_label"] = ""
+            st.session_state["settings_y_label"] = ""
+            st.session_state["settings_y2_label"] = ""
+            st.session_state["settings_width"] = 10.0
+            st.session_state["settings_height"] = 6.0
+            st.session_state["settings_grid"] = True
+            st.session_state["settings_legend"] = True
+            st.session_state["settings_legend_best"] = True
+            st.session_state["settings_legend_position"] = "upper right"
+            st.session_state["settings_bar_width"] = 0.8
+            st.session_state["settings_histogram_bins"] = 20
+            st.session_state["settings_histogram_density"] = False
+            st.session_state["settings_scatter_size"] = 50
+            st.session_state["settings_area_alpha"] = 0.5
+            st.session_state["settings_pie_explode"] = 0.0
+            st.session_state["settings_pie_labels"] = True
+            st.session_state["settings_box_outliers"] = True
+            st.session_state["settings_violin_median"] = True
+            st.session_state["settings_step_where"] = "mid"
+
         except Exception:
             # st.session_state may not be available outside Streamlit runtime (e.g., tests)
             pass
@@ -319,8 +351,8 @@ def get_state() -> AppState:
 
     if "app_state" not in st.session_state:
         st.session_state.app_state = create_default_state()
-    state: AppState = st.session_state.app_state
 
+    state: AppState = st.session_state.app_state
     return state
 
 
