@@ -7,6 +7,23 @@ and this project uses [Calendar Versioning](https://calver.org/) (YYYY.M.MICRO).
 
 ## [Unreleased]
 
+## [2026.2.3] - 2026-02-22
+
+### Features
+
+- feat(ui): add PyWebView desktop app mode (#23)
+- feat(ui): restore derived column UI feature (#22)
+
+### Other
+
+- chore(deps): improve PyPI metadata and update to beta status (#27)
+- refactor(cli): remove headless render and config system (#25)
+- chore(ci): add sonar config (#26)
+- docs: update documentation to reflect Streamlit migration (#24)
+- chore(release): bump to 2026.2.3.dev0 (#21)
+- refactor(cli): create PR for post-release version bump (#20)
+
+
 ## [2026.2.2] - 2026-02-21
 
 ### Features
