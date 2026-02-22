@@ -36,14 +36,6 @@ jobs:
     
     - name: Run tests with pytest
       run: uv run pytest --cov=plottini --cov-report=xml --cov-report=term
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@0561704f0f02c16a585d4c7555e57fa2e44cf909  # v5.5.2
-      if: matrix.python-version == '3.10'
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: false
-      continue-on-error: true
 
   build:
     name: Build package
