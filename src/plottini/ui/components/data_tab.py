@@ -48,9 +48,10 @@ def _render_file_upload(state: AppState) -> None:
     if "file_uploader_key" not in st.session_state:
         st.session_state.file_uploader_key = 0
 
+    # Allow all file types in uploader, validate after selection
     uploaded_files = st.file_uploader(
         "Upload TSV files",
-        type=["tsv", "txt", "dat"],
+        type=None,
         accept_multiple_files=True,
         help="Upload one or more tab-separated value files (.tsv, .txt, .dat)",
         key=f"file_uploader_{st.session_state.file_uploader_key}",
@@ -62,6 +63,10 @@ def _render_file_upload(state: AppState) -> None:
                 _process_uploaded_file(state, uploaded_file)
 
 
+# Allowed file extensions for TSV data files
+ALLOWED_EXTENSIONS = {".tsv", ".txt", ".dat"}
+
+
 def _process_uploaded_file(state: AppState, uploaded_file: object) -> None:
     """Process a newly uploaded file.
 
@@ -70,10 +75,20 @@ def _process_uploaded_file(state: AppState, uploaded_file: object) -> None:
         uploaded_file: Streamlit UploadedFile object
     """
     try:
+        file_name: str = uploaded_file.name  # type: ignore[attr-defined]
+
+        # Validate file extension
+        ext = "." + file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
+        if ext not in ALLOWED_EXTENSIONS:
+            st.error(
+                f"Invalid file type: {file_name}. "
+                f"Only .tsv, .txt, and .dat files are supported."
+            )
+            return
+
         uploaded_file.seek(0)  # type: ignore[attr-defined]
         content = uploaded_file.read()  # type: ignore[attr-defined]
         uploaded_file.seek(0)  # type: ignore[attr-defined]
-        file_name: str = uploaded_file.name  # type: ignore[attr-defined]
 
         uf = UploadedFile(name=file_name, content=content)
         state.uploaded_files[file_name] = uf
