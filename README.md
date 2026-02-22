@@ -3,6 +3,8 @@
 **A user-friendly graph builder for creating publication-quality plots from TSV data**
 
 [![PyPI version](https://badge.fury.io/py/plottini.svg)](https://badge.fury.io/py/plottini)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=lanthoor_plottini&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=lanthoor_plottini)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=lanthoor_plottini&metric=coverage)](https://sonarcloud.io/summary/new_code?id=lanthoor_plottini)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

@@ -15,18 +15,29 @@ authors = [
 maintainers = [
     {name = "Lallu Anthoor", email = "dev@spendly.co.in"}
 ]
-keywords = ["graph", "plot", "matplotlib", "visualization", "data", "tsv", "chart"]
+keywords = [
+    "graph", "plot", "matplotlib", "visualization", "data", "tsv", "chart",
+    "scientific", "publication", "streamlit", "desktop"
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Environment :: MacOS X",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: X11 Applications",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Visualization",
     "Topic :: Scientific/Engineering :: Information Analysis",
+    "Typing :: Typed",
+    "Natural Language :: English",
 ]
 
 dependencies = [
@@ -56,6 +67,7 @@ Homepage = "https://github.com/lanthoor/plottini"
 Documentation = "https://github.com/lanthoor/plottini#readme"
 Repository = "https://github.com/lanthoor/plottini"
 Issues = "https://github.com/lanthoor/plottini/issues"
+Changelog = "https://github.com/lanthoor/plottini/releases"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/plottini"]
