@@ -38,11 +38,6 @@ Plottini is designed for researchers, scientists, and anyone who needs to create
 - **Configurable DPI**: High-resolution output for publications
 - **Vector formats**: Scalable graphics for presentations and papers
 
-### Advanced Features
-- **Configuration files**: Expert users can use TOML files for reproducible workflows
-- **Headless rendering**: Batch processing without the UI
-- **Detailed error messages**: Clear, actionable feedback for data issues
-
 ---
 
 ## Installation
@@ -81,14 +76,6 @@ plottini --port 8080
 
 # Show version
 plottini version
-```
-
-### Expert Mode: Headless Rendering
-
-For automation and batch processing:
-
-```bash
-plottini render --config my-graph.toml --output figure.png
 ```
 
 ---
@@ -135,46 +122,6 @@ plottini render --config my-graph.toml --output figure.png
 
 ---
 
-## Configuration File Format
-
-For reproducible workflows, you can create a TOML configuration file:
-
-```toml
-# my-graph.toml
-
-[[files]]
-path = "data/experiment1.tsv"
-has_header = true
-comment_chars = ["#"]
-
-[[series]]
-x = "time"
-y = "velocity"
-label = "Experiment 1"
-color = "#0072B2"
-transform_y = "log10"
-
-[plot]
-type = "line"
-title = "Velocity over Time"
-x_label = "Time (s)"
-y_label = "Velocity (m/s)"
-figure_width = 10.0
-figure_height = 6.0
-
-[export]
-format = "png"
-dpi = 300
-```
-
-Render directly from the command line:
-
-```bash
-plottini render --config my-graph.toml --output velocity.png
-```
-
----
-
 ## Supported Chart Types
 
 | Category | Chart Types |
@@ -205,18 +152,6 @@ Available preset transformations:
 ## Requirements
 
 - Python 3.10 or higher
-- matplotlib ≥ 3.7
-- numpy ≥ 1.24
-- streamlit ≥ 1.30
-- pywebview ≥ 4.0
-- click ≥ 8.1
-
----
-
-## Documentation
-
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development setup and contribution guidelines
-- **[AGENTS.md](AGENTS.md)** - Instructions for AI agents working on the project
 
 ---
 
@@ -231,43 +166,15 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 ---
 
-## Roadmap
-
-### Status: Complete
-
-All planned features have been implemented:
-
-- [x] Project structure
-- [x] Package configuration
-- [x] CLI framework
-- [x] CI/CD pipelines
-- [x] TSV Parser implementation
-- [x] DataFrame implementation
-- [x] Basic plotting (Line, Bar, Pie)
-- [x] Extended charts (Scatter, Histogram, Polar, Box, Violin, Area, etc.)
-- [x] Export functionality (PNG, SVG, PDF, EPS)
-- [x] Data transformations and derived columns
-- [x] Multi-file support and alignment
-- [x] Secondary Y-axis support
-- [x] Configuration system (TOML)
-- [x] UI implementation with Streamlit
-- [x] Desktop app mode with PyWebView
-- [x] Headless render mode
-
----
-
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
-
-Copyright (c) 2025 Lallu Anthoor
+[MIT License](LICENSE)
 
 ---
 
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/lanthoor/plottini/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/lanthoor/plottini/discussions)
 - **Author**: Lallu Anthoor (dev@spendly.co.in)
 
 ---

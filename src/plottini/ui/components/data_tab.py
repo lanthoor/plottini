@@ -81,8 +81,7 @@ def _process_uploaded_file(state: AppState, uploaded_file: object) -> None:
         ext = "." + file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
         if ext not in ALLOWED_EXTENSIONS:
             st.error(
-                f"Invalid file type: {file_name}. "
-                f"Only .tsv, .txt, and .dat files are supported."
+                f"Invalid file type: {file_name}. Only .tsv, .txt, and .dat files are supported."
             )
             return
 
