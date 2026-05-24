@@ -1,5 +1,6 @@
 queue_rules:
   - name: plottini-queue
     update_method: rebase
+    update_bot_account: lanthoor
 merge_queue:
   max_parallel_checks: 1
