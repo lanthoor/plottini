@@ -1,3 +1,5 @@
 queue_rules:
   - name: plottini-queue
     update_method: rebase
+merge_queue:
+  max_parallel_checks: 1
